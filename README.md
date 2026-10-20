@@ -1,4 +1,4 @@
-# GymAI
+# UniFit
 
 Sistema de gestão de academia com previsão de evasão e análise de postura por vídeo.
 
