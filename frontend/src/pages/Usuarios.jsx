@@ -28,7 +28,7 @@ export default function Usuarios() {
   async function criar(e) {
     e.preventDefault();
     setErro(""); setOk("");
-    if (f.senha.length < 6) return setErro("A senha precisa ter pelo menos 6 caracteres.");
+    if (f.senha.length < 8) return setErro("A senha precisa ter pelo menos 8 caracteres.");
     setEnviando(true);
     try {
       await api.post("/usuarios", { ...f, nome: f.nome.trim(), email: f.email.trim() });
@@ -64,7 +64,7 @@ export default function Usuarios() {
         <form className="form-row" onSubmit={criar}>
           <label>Nome<input value={f.nome} onChange={mudar("nome")} maxLength={120} required /></label>
           <label>E-mail<input type="email" value={f.email} onChange={mudar("email")} maxLength={150} required /></label>
-          <label>Senha<input type="password" value={f.senha} onChange={mudar("senha")} autoComplete="new-password" required /></label>
+          <label>Senha<input type="password" value={f.senha} onChange={mudar("senha")} autoComplete="new-password" minLength={8} required /></label>
           <label>Perfil
             <select value={f.perfil} onChange={mudar("perfil")}>
               {PERFIS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}

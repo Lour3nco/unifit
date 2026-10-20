@@ -53,6 +53,7 @@ export default function Relatorios() {
   const mensal = r.mensal.map((m) => ({ ...m, rotulo: MES(m.mes) }));
   const totalReceita = r.mensal.reduce((s, m) => s + m.receita, 0);
   const totalNovas = r.mensal.reduce((s, m) => s + m.novas_matriculas, 0);
+  const totalRetornos = r.mensal.reduce((s, m) => s + m.retornos, 0);
   const totalVigentes = r.por_plano.reduce((s, p) => s + p.alunos, 0);
 
   return (
@@ -68,7 +69,9 @@ export default function Relatorios() {
 
       <div className="kpis">
         <div className="kpi"><small>Receita no período</small><strong>{moeda(totalReceita)}</strong></div>
-        <div className="kpi"><small>Novas matrículas</small><strong>{totalNovas}</strong></div>
+        <div className="kpi" title="Primeira matrícula de cada aluno. Renovações não contam.">
+          <small>Novos alunos</small><strong>{totalNovas}</strong>
+          {totalRetornos > 0 && <em>+ {totalRetornos} ex-aluno(s) voltaram</em>}</div>
         <div className="kpi"><small>Alunos com plano vigente</small><strong>{totalVigentes}</strong></div>
         <div className="kpi"><small>Check-ins no período</small><strong>{r.frequencia.total}</strong></div>
       </div>
@@ -76,8 +79,8 @@ export default function Relatorios() {
       <div className="grid2" style={{ marginTop: 14 }}>
         <section className="card"><h3>Receita recebida por mês</h3>
           <Barras dados={mensal} x="rotulo" y="receita" nome="Receita" formato={(v) => moeda(v).replace(",00", "")} /></section>
-        <section className="card"><h3>Novas matrículas por mês</h3>
-          <Barras dados={mensal} x="rotulo" y="novas_matriculas" nome="Matrículas" /></section>
+        <section className="card"><h3>Novos alunos por mês</h3>
+          <Barras dados={mensal} x="rotulo" y="novas_matriculas" nome="Novos alunos" /></section>
         <section className="card"><h3>Check-ins por dia da semana</h3>
           <Barras dados={r.frequencia.por_dia} x="dia" y="total" nome="Check-ins" /></section>
         <section className="card"><h3>Check-ins por horário de entrada</h3>
@@ -108,9 +111,9 @@ export default function Relatorios() {
       <section className="card" style={{ marginTop: 14 }}>
         <div className="card-topo">
           <div>
-            <h3>Risco de evasão (IA)</h3>
-            <small className="hint">{r.evasao.data ? `Último cálculo em ${data(r.evasao.data)}` : "Ainda não calculado."} Usa frequência,
-              atrasos, tempo de casa e valor do plano de cada aluno com plano vigente.</small>
+            <h3>Risco de evasão</h3>
+            <small className="hint">{r.evasao.data ? `Último cálculo em ${data(r.evasao.data)}` : "Ainda não calculado."} Usa frequência
+              (proporcional ao tempo de casa), dias sem treinar, atrasos, tempo de casa e valor mensal do plano de cada aluno com plano vigente.</small>
           </div>
           <button className="btn" type="button" onClick={calcularEvasao} disabled={calculando}>
             {calculando ? "Calculando..." : "Calcular agora"}</button>

@@ -47,7 +47,8 @@ export default function MeusPagamentos() {
   return (
     <>
       <div className="aviso" role="note">
-        Ambiente de demonstração: os pagamentos são de exemplo e nenhuma cobrança real é feita.
+        Pague na recepção ou por Pix, cartão ou boleto e clique em “Informar pagamento”. A mensalidade só
+        fica como paga depois que a recepção confirmar o recebimento.
       </div>
       <div className="err" role="alert">{erro}</div>
       {ok && <div className="okmsg" role="status" style={{ marginBottom: 14 }}>{ok}</div>}
@@ -86,16 +87,20 @@ export default function MeusPagamentos() {
               {r.pagamentos.map((p) => {
                 const st = situacao(p);
                 const aberto = st === "pendente" || st === "atrasado";
+                const informado = aberto && p.informado_em;
                 return (
                   <tr key={p.id}>
                     <td>{data(p.vencimento)}</td>
                     <td>{moeda(p.valor)}</td>
-                    <td><span className={`chip ${st}`}>{STATUS[st] || st}</span></td>
-                    <td>{p.pago_em ? `${data(p.pago_em)}${p.forma ? ` · ${p.forma}` : ""}` : "—"}</td>
+                    <td>{informado
+                      ? <span className="chip pendente">Aguardando confirmação</span>
+                      : <span className={`chip ${st}`}>{STATUS[st] || st}</span>}</td>
+                    <td>{p.pago_em ? `${data(p.pago_em)}${p.forma ? ` · ${p.forma}` : ""}`
+                      : informado ? <small className="hint">Informado em {new Date(p.informado_em).toLocaleDateString("pt-BR")} · {p.informado_forma}</small> : "—"}</td>
                     <td>
-                      {aberto && pagando !== p.id && (
+                      {aberto && !informado && pagando !== p.id && (
                         <button type="button" className="btn compacto" onClick={() => { setPagando(p.id); setForma("pix"); }}>
-                          Pagar
+                          Informar pagamento
                         </button>
                       )}
                       {pagando === p.id && (
@@ -105,8 +110,8 @@ export default function MeusPagamentos() {
                             {FORMAS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
                           </select>
                           <button type="button" className="btn compacto" disabled={enviando}
-                            onClick={() => executar(() => api.post(`/meu/pagamentos/${p.id}/pagar`, { forma }))}>
-                            {enviando ? "Pagando..." : "Confirmar"}
+                            onClick={() => executar(() => api.post(`/meu/pagamentos/${p.id}/informar`, { forma }))}>
+                            {enviando ? "Enviando..." : "Informar"}
                           </button>
                           <button type="button" className="btn-sec" onClick={() => setPagando(null)}>Cancelar</button>
                         </div>

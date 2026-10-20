@@ -82,8 +82,10 @@ def criar(dados: AlunoNovoIn, db: Session = Depends(get_db), _=Depends(editar)):
     """Novo aluno já matriculado: o número de matrícula é gerado pelo banco."""
     exige_plano_ativo(db, dados.plano_id)  # valida antes de gravar o aluno
     valores = dados.model_dump(exclude={"plano_id", "data_inicio"})
-    aluno_id = salvar_aluno(db, {**valores, "nome": dados.nome.strip()})
-    criar_matricula(db, aluno_id, dados.plano_id, dados.data_inicio)
+    # aluno e matrícula na mesma transação: se a matrícula falhar, o aluno também não fica gravado
+    aluno_id = salvar_aluno(db, {**valores, "nome": dados.nome.strip()}, commit=False)
+    criar_matricula(db, aluno_id, dados.plano_id, dados.data_inicio, commit=False)
+    db.commit()
     return jsonable_encoder(_com_situacao(db, [exige_aluno(db, aluno_id)])[0])
 
 

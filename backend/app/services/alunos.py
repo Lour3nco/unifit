@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session  # type: ignore[import-not-found]
 from ..models import Usuario
 from ..reflexao import coluna, tabela
 
-log = logging.getLogger("gymai")
+log = logging.getLogger("unifit")
 AUTOMATICAS = {"criado_em", "atualizado_em", "created_at", "updated_at"}
 
 
@@ -48,32 +48,39 @@ def ficha_para_cadastro(db: Session, email: str, cpf: str):
     return None
 
 
-def vincular_aluno(db: Session, usuario: Usuario, ficha_id=None, cpf: str | None = None, por_email: bool = False) -> bool:
-    """Liga a conta a uma ficha existente ou cria uma ficha nova em "alunos".
+def ligar_ficha(db: Session, usuario: Usuario, ficha_id=None, cpf: str | None = None, por_email: bool = False) -> bool:
+    """Liga a conta a uma ficha existente ou cria uma ficha nova em "alunos", sem commit (quem chama decide).
     ficha_id: ficha já validada (ficha_para_cadastro). por_email: só para contas criadas pelo administrador.
-    Nunca derruba o cadastro da conta: em qualquer problema só devolve False."""
+    Devolve False quando não há o que fazer (conta já ligada ou tabela incompatível); erros do banco sobem."""
+    t = tabela("alunos")
+    if t is None or "usuario_id" not in t.c or aluno_do_usuario(db, usuario):
+        return False
+    if ficha_id is None and por_email:
+        linha = db.execute(select(t.c.id).where(func.lower(t.c.email) == usuario.email.lower(),
+                                                t.c.usuario_id.is_(None)).limit(1)).first()
+        ficha_id = linha.id if linha else None
+    if ficha_id is not None:
+        db.execute(update(t).where(t.c.id == ficha_id).values(usuario_id=usuario.id))
+        return True
+    candidatos = {"nome": usuario.nome, "email": usuario.email, "usuario_id": usuario.id, "cpf": cpf, "ativo": True}
+    valores = {k: v for k, v in candidatos.items() if k in t.c and v is not None}
+    for c in t.c:
+        if c.name in AUTOMATICAS and not c.nullable and c.server_default is None:
+            valores[c.name] = func.now()
+    obrigatorias = [c.name for c in t.c if not c.nullable and not c.primary_key
+                    and c.server_default is None and c.identity is None and c.default is None]
+    if any(n not in valores for n in obrigatorias):
+        return False  # a tabela exige campos que a conta não tem
+    db.execute(insert(t).values(**valores))
+    return True
+
+
+def vincular_aluno(db: Session, usuario: Usuario, ficha_id=None, cpf: str | None = None, por_email: bool = False) -> bool:
+    """Versão tolerante de ligar_ficha para contas já gravadas (criadas ou promovidas pelo administrador):
+    faz o commit e, em qualquer problema, só devolve False. O aluno ainda pode criar a ficha em "Meus dados"."""
     try:
-        t = tabela("alunos")
-        if t is None or "usuario_id" not in t.c or aluno_do_usuario(db, usuario):
+        if not ligar_ficha(db, usuario, ficha_id, cpf, por_email):
             return False
-        if ficha_id is None and por_email:
-            linha = db.execute(select(t.c.id).where(func.lower(t.c.email) == usuario.email.lower(),
-                                                    t.c.usuario_id.is_(None)).limit(1)).first()
-            ficha_id = linha.id if linha else None
-        if ficha_id is not None:
-            db.execute(update(t).where(t.c.id == ficha_id).values(usuario_id=usuario.id))
-            db.commit()
-            return True
-        candidatos = {"nome": usuario.nome, "email": usuario.email, "usuario_id": usuario.id, "cpf": cpf, "ativo": True}
-        valores = {k: v for k, v in candidatos.items() if k in t.c and v is not None}
-        for c in t.c:
-            if c.name in AUTOMATICAS and not c.nullable and c.server_default is None:
-                valores[c.name] = func.now()
-        obrigatorias = [c.name for c in t.c if not c.nullable and not c.primary_key
-                        and c.server_default is None and c.identity is None and c.default is None]
-        if any(n not in valores for n in obrigatorias):
-            return False  # a tabela exige campos que a conta não tem
-        db.execute(insert(t).values(**valores))
         db.commit()
         return True
     except Exception as erro:

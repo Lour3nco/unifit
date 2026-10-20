@@ -10,11 +10,11 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import exige_perfis
 from ..reflexao import tabela
-from ..services.academia import EM_ABERTO, atualizar_atrasados, dia_local, hoje, hora_local, utc
+from ..services.academia import EM_ABERTO, dia_local, hoje, hora_local, utc
 
 router = APIRouter(prefix="/relatorios", tags=["relatórios"], dependencies=[Depends(exige_perfis("administrador"))])
 DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]  # extract(dow): 0 = domingo
-MODELO_VERSAO = "rede-evasao-v1"
+MODELO_VERSAO = "rede-evasao-v2"
 
 
 def _meses(n: int) -> list:
@@ -33,7 +33,6 @@ def _vigente(mat, dia):
 
 @router.get("")
 def relatorio(meses: int = Query(6, ge=1, le=24), db: Session = Depends(get_db)):
-    atualizar_atrasados(db)
     pag, mat, alu, planos, chk, prev = (tabela(t) for t in ("pagamentos", "matriculas", "alunos", "planos",
                                                             "checkins", "previsoes_evasao"))
     dia = hoje()
@@ -43,9 +42,17 @@ def relatorio(meses: int = Query(6, ge=1, le=24), db: Session = Depends(get_db))
     mes_pag = func.to_char(pag.c.data_pagamento, "YYYY-MM")
     receita = dict(db.execute(select(mes_pag, func.sum(pag.c.valor)).where(
         pag.c.status == "pago", pag.c.data_pagamento >= desde).group_by(mes_pag)).all())
-    mes_mat = func.to_char(mat.c.data_inicio, "YYYY-MM")
-    novas = dict(db.execute(select(mes_mat, func.count()).where(mat.c.data_inicio >= desde).group_by(mes_mat)).all())
-    mensal = [{"mes": m, "receita": float(receita.get(m, 0)), "novas_matriculas": novas.get(m, 0)} for m in lista_meses]
+    # nova = primeira matrícula do aluno; retorno = ex-aluno que se matriculou de novo
+    # (a renovação automática estende a mesma matrícula, então não entra em nenhuma das duas)
+    ordem = func.row_number().over(partition_by=mat.c.aluno_id, order_by=(mat.c.data_inicio, mat.c.id)).label("n")
+    todas = select(mat.c.data_inicio, ordem).subquery()
+    mes_mat = func.to_char(todas.c.data_inicio, "YYYY-MM")
+    novas, retornos = {}, {}
+    for m, primeira, n in db.execute(select(mes_mat, todas.c.n == 1, func.count()).where(todas.c.data_inicio >= desde)
+                                     .group_by(mes_mat, todas.c.n == 1)).all():
+        (novas if primeira else retornos)[m] = n
+    mensal = [{"mes": m, "receita": float(receita.get(m, 0)), "novas_matriculas": novas.get(m, 0),
+               "retornos": retornos.get(m, 0)} for m in lista_meses]
 
     situacao: dict = {}  # "ativa" com data de fim passada aparece como "vencida"
     for st, fim, n in db.execute(select(mat.c.status, mat.c.data_fim >= dia, func.count())
@@ -110,10 +117,9 @@ def calcular_evasao(db: Session = Depends(get_db)):
 
     pag, mat, planos, chk, prev = (tabela(t) for t in ("pagamentos", "matriculas", "planos", "checkins",
                                                        "previsoes_evasao"))
-    atualizar_atrasados(db)
     dia = hoje()
     vigentes = db.execute(
-        select(mat.c.aluno_id, planos.c.valor).select_from(mat.join(planos, planos.c.id == mat.c.plano_id))
+        select(mat.c.aluno_id, planos.c.valor, planos.c.duracao_dias).select_from(mat.join(planos, planos.c.id == mat.c.plano_id))
         .where(_vigente(mat, dia))).all()
     if not vigentes:
         return {"mensagem": "Nenhum aluno com plano vigente para analisar.", "alunos": 0}
@@ -133,15 +139,25 @@ def calcular_evasao(db: Session = Depends(get_db)):
     inicio = dict(db.execute(select(mat.c.aluno_id, func.min(mat.c.data_inicio))
                              .where(mat.c.aluno_id.in_(ids)).group_by(mat.c.aluno_id)).all())
 
-    # mesmas entradas do treino: [check-ins 30d, check-ins 30-60d, dias sem treinar, atrasos, meses de casa, valor]
-    linhas = [[min(c30.get(a, 0), 30), min(cprev.get(a, 0), 30),
-               min((dia - ultimo[a]).days, 30) if a in ultimo else 30,
-               min(atrasos.get(a, 0), 4), max(1, min(((dia - inicio[a]).days // 30) + 1, 24)), float(valor)]
-              for a, valor in vigentes]
+    # mesmas entradas do treino: [frequência 30d, frequência 30-60d, dias sem treinar, atrasos, meses de casa,
+    # valor mensal]. As frequências são check-ins "por 30 dias" proporcionais ao tempo de casa, para quem
+    # entrou há poucos dias não ser comparado com um mês inteiro.
+    linhas = []
+    for a, valor, duracao in vigentes:
+        casa = max((dia - inicio[a]).days, 0)
+        janela = min(max(casa, 7), 30)  # mínimo de 7 dias: evita extrapolar 1 treino em 1 dia para 30/mês
+        freq = min(c30.get(a, 0) * 30 / janela, 30)
+        janela_ant = min(max(casa - 30, 0), 30)
+        # sem pelo menos uma semana de período anterior, repete a frequência atual (tendência neutra)
+        freq_ant = min(cprev.get(a, 0) * 30 / janela_ant, 30) if janela_ant >= 7 else freq
+        sem_treinar = min((dia - ultimo[a]).days if a in ultimo else casa, 30)
+        mensal = float(valor) * 30 / (duracao or 30)  # trimestral/anual convertidos para valor por mês
+        linhas.append([freq, freq_ant, sem_treinar, min(atrasos.get(a, 0), 4), max(1, min(casa // 30 + 1, 24)),
+                       mensal])
     probs = churn.prever(linhas)
 
     stmt = pg_insert(prev).values([{"aluno_id": a, "data_previsao": dia, "probabilidade": round(p, 4),
-                                    "modelo_versao": MODELO_VERSAO} for (a, _), p in zip(vigentes, probs)])
+                                    "modelo_versao": MODELO_VERSAO} for (a, _, _), p in zip(vigentes, probs)])
     db.execute(stmt.on_conflict_do_update(
         index_elements=[prev.c.aluno_id, prev.c.data_previsao],
         set_={"probabilidade": stmt.excluded.probabilidade, "modelo_versao": stmt.excluded.modelo_versao}))

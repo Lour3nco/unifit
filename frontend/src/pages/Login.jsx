@@ -48,7 +48,7 @@ export default function Login({ aba, onAba, onCadastro }) {
   return (
     <section className="login">
       <form onSubmit={enviar}>
-        <div className="brand">Gym<b>AI</b></div>
+        <div className="brand">Uni<b>Fit</b></div>
         <Abas aba={aba} onAba={trocar} />
         <h1>{t.titulo}</h1>
         <p>{t.texto}</p>

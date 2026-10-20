@@ -40,7 +40,7 @@ export default function Cadastro({ aba, onAba, onLogin }) {
     e.preventDefault();
     setErro("");
     if (f.nome.trim().length < 2) return setErro("Digite seu nome completo.");
-    if (f.senha.length < 6) return setErro("A senha precisa ter pelo menos 6 caracteres.");
+    if (f.senha.length < 8) return setErro("A senha precisa ter pelo menos 8 caracteres.");
     if (f.senha !== f.confirmar) return setErro("As senhas não são iguais.");
     if (aba === "aluno" && f.cpf.replace(/\D/g, "").length !== 11) return setErro("Informe o CPF completo.");
     if (aba === "aluno" && !f.plano_id) return setErro("Escolha um plano.");
@@ -65,7 +65,7 @@ export default function Cadastro({ aba, onAba, onLogin }) {
     return (
       <section className="login">
         <div className="form">
-          <div className="brand">Gym<b>AI</b></div>
+          <div className="brand">Uni<b>Fit</b></div>
           <h1>Pedido enviado</h1>
           <p>{enviado}</p>
           <button className="btn" type="button" onClick={onLogin}>Voltar para o login</button>
@@ -78,7 +78,7 @@ export default function Cadastro({ aba, onAba, onLogin }) {
   return (
     <section className="login">
       <form onSubmit={enviar}>
-        <div className="brand">Gym<b>AI</b></div>
+        <div className="brand">Uni<b>Fit</b></div>
         <Abas aba={aba} onAba={trocar} />
         <h1>{t.titulo}</h1>
         <p>{t.texto}</p>
@@ -112,7 +112,7 @@ export default function Cadastro({ aba, onAba, onLogin }) {
           </label>
         )}
         <label>Senha
-          <input type="password" value={f.senha} onChange={mudar("senha")} autoComplete="new-password" minLength={6} required />
+          <input type="password" value={f.senha} onChange={mudar("senha")} autoComplete="new-password" minLength={8} required />
         </label>
         <label>Confirmar senha
           <input type="password" value={f.confirmar} onChange={mudar("confirmar")} autoComplete="new-password" required />

@@ -28,6 +28,20 @@ export default function Postura() {
   const carregarHistorico = (id) =>
     api.get("/postura", { params: { aluno_id: id } }).then((r) => setHistorico(r.data)).catch(() => setHistorico([]));
 
+  // a análise roda numa fila no servidor: enquanto estiver "processando", consulta o resultado a cada 3 s
+  const processando = sessao?.status === "processando";
+  useEffect(() => {
+    if (!processando) return undefined;
+    const id = setInterval(() => {
+      api.get(`/postura/${sessao.id}`).then((r) => {
+        if (r.data.status === "processando") return;
+        setSessao(r.data);
+        carregarHistorico(r.data.aluno_id);
+      }).catch(() => { /* tenta de novo no próximo intervalo */ });
+    }, 3000);
+    return () => clearInterval(id);
+  }, [processando, sessao?.id]);
+
   function escolher(a) {
     setAluno(a);
     setSessao(null);
@@ -47,7 +61,7 @@ export default function Postura() {
         timeout: 10 * 60 * 1000,
         onUploadProgress: (p) => {
           const pct = p.total ? Math.round((p.loaded / p.total) * 100) : 0;
-          setEtapa(pct < 100 ? `Enviando vídeo... ${pct}%` : "Analisando com IA... em CPU pode levar até 1 minuto.");
+          setEtapa(pct < 100 ? `Enviando vídeo... ${pct}%` : "Colocando o vídeo na fila...");
         },
       });
       setSessao(data);
@@ -90,7 +104,7 @@ export default function Postura() {
             <label>Vídeo
               <input type="file" accept="video/*" onChange={(e) => setVideo(e.target.files[0] || null)} required />
             </label>
-            <button className="btn" type="submit" disabled={!!etapa}>{etapa ? "Analisando..." : "Analisar"}</button>
+            <button className="btn" type="submit" disabled={!!etapa}>{etapa ? "Enviando..." : "Analisar"}</button>
           </form>
         )}
         {etapa && <p className="hint" role="status">{etapa}</p>}
@@ -110,7 +124,10 @@ export default function Postura() {
                 {historico.map((h) => (
                   <tr key={h.id}>
                     <td>{dataHora(h.criado_em)}</td><td>{h.exercicio}</td><td>{h.video_nome}</td>
-                    <td>{h.repeticoes ?? "—"}</td><td>{h.alertas}</td>
+                    {h.status === "concluida"
+                      ? <><td>{h.repeticoes ?? "—"}</td><td>{h.alertas}</td></>
+                      : <td colSpan="2"><span className={`chip ${h.status === "erro" ? "atrasado" : "pendente"}`}>
+                          {h.status === "erro" ? "Erro" : "Processando"}</span></td>}
                     <td><button className="btn-sec" type="button" onClick={() => abrir(h.id)}>Ver</button></td>
                   </tr>
                 ))}
@@ -125,6 +142,17 @@ export default function Postura() {
 }
 
 function Resultado({ s }) {
+  if (s.status !== "concluida") {
+    return (
+      <section className="card" style={{ marginTop: 14 }} role="status">
+        <h3>{s.exercicio} · {s.aluno} · {dataHora(s.criado_em)}</h3>
+        {s.status === "erro"
+          ? <div className="err">{s.erro || "Não foi possível analisar o vídeo."}</div>
+          : <p className="hint">Analisando com IA... em CPU pode levar até 1 minuto (mais se houver outros vídeos na fila).
+              Pode sair desta tela: o resultado fica no histórico.</p>}
+      </section>
+    );
+  }
   const r = s.resultado;
   const p = r.resumo[r.articulacao_principal];
   const series = SERIES.filter(([k]) => r.serie.some((q) => q[k] != null));

@@ -1,10 +1,17 @@
-# O banco é o Postgres do Supabase (schema "gymIA"), então não há serviço "db" aqui.
+# Produção: o site e a API ficam em http://localhost:8080 (a API em /api, via nginx).
+# O banco é o Postgres do Supabase (schema "unifit"), então não há serviço "db" aqui.
+# Antes do primeiro "docker compose up", rode as migrações de backend/banco no Supabase.
 services:
   backend:
     build: ./backend
     env_file: .env
-    ports:
-      - "8000:8000"
+    environment:
+      # só o nginx fala com o backend (a porta 8000 não é publicada), então dá para confiar no
+      # X-Forwarded-For dele: é o que faz o limite de login contar o IP real de cada usuário
+      FORWARDED_ALLOW_IPS: "*"
+    expose:
+      - "8000"
+    restart: unless-stopped
     # GPU (CUDA): requer NVIDIA Container Toolkit. Sem GPU NVIDIA, apague o bloco
     # "deploy" abaixo; o PyTorch usa CPU automaticamente (RNF07).
     deploy:
@@ -17,9 +24,8 @@ services:
 
   frontend:
     build: ./frontend
-    environment:
-      VITE_API_URL: http://localhost:8000
     ports:
-      - "5173:5173"
+      - "8080:80"
     depends_on:
       - backend
+    restart: unless-stopped

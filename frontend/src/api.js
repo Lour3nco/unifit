@@ -9,7 +9,7 @@ api.interceptors.request.use((config) => {
 });
 
 export function mensagemErro(err, padrao = "Algo deu errado. Tente novamente.") {
-  if (!err.response) return "Não foi possível conectar à API. Verifique se o backend está rodando.";
+  if (!err.response) return "Erro 503: serviço indisponível no momento. Tente novamente em alguns instantes.";
   const detalhe = err.response.data?.detail;
   if (typeof detalhe === "string") return detalhe;
   if (Array.isArray(detalhe)) {

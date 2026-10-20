@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api, { mensagemErro } from "../api";
 import BuscaAluno from "../components/BuscaAluno.jsx";
+import { FormSessao, GraficoEvolucao, HistoricoSessoes, ResumoMensal } from "../components/Evolucao.jsx";
 import { data, numeroOuNulo } from "../formato";
 
 const ITEM_VAZIO = { exercicio_id: "", series: 3, repeticoes: 12, carga_kg: "", descanso_seg: 60 };
@@ -30,20 +31,38 @@ export default function Treinos() {
           </div>
         )}
       </section>
-      {aluno && <FichasDoAluno key={aluno.id} aluno={aluno} exercicios={exercicios} />}
+      {aluno && <PainelAluno key={aluno.id} aluno={aluno} exercicios={exercicios} />}
       <Exercicios exercicios={exercicios} onMudou={carregarExercicios} />
     </>
   );
 }
 
-function FichasDoAluno({ aluno, exercicios }) {
+function PainelAluno({ aluno, exercicios }) {
   const [fichas, setFichas] = useState(null);
-  const [editando, setEditando] = useState(null); // null, "nova" ou id da ficha
+  const [aba, setAba] = useState("fichas"); // fichas | evolucao
   const [erro, setErro] = useState("");
 
   useEffect(() => {
     api.get("/treinos", { params: { aluno_id: aluno.id } }).then((r) => setFichas(r.data)).catch((e) => setErro(mensagemErro(e)));
   }, [aluno.id]);
+
+  return (
+    <>
+      <div className="abas" role="tablist" aria-label="Fichas ou evolução" style={{ marginTop: 14 }}>
+        <button type="button" role="tab" aria-selected={aba === "fichas"} onClick={() => setAba("fichas")}>Fichas de treino</button>
+        <button type="button" role="tab" aria-selected={aba === "evolucao"} onClick={() => setAba("evolucao")}>Evolução</button>
+      </div>
+      <div className="err" role="alert">{erro}</div>
+      {aba === "fichas"
+        ? <FichasDoAluno aluno={aluno} exercicios={exercicios} fichas={fichas} setFichas={setFichas} />
+        : <AcompanhamentoDoAluno aluno={aluno} fichas={fichas} />}
+    </>
+  );
+}
+
+function FichasDoAluno({ aluno, exercicios, fichas, setFichas }) {
+  const [editando, setEditando] = useState(null); // null, "nova" ou id da ficha
+  const [erro, setErro] = useState("");
 
   async function arquivar(f, ativo) {
     setErro("");
@@ -81,6 +100,55 @@ function FichasDoAluno({ aluno, exercicios }) {
           <TabelaItens itens={f.itens} />
         </section>
       ))}
+    </>
+  );
+}
+
+function AcompanhamentoDoAluno({ aluno, fichas }) {
+  const [sessoes, setSessoes] = useState(null);
+  const [evolucao, setEvolucao] = useState(null);
+  const [registrando, setRegistrando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const carregar = () => {
+    api.get("/sessoes", { params: { aluno_id: aluno.id } }).then((r) => setSessoes(r.data)).catch((e) => setErro(mensagemErro(e)));
+    api.get("/evolucao", { params: { aluno_id: aluno.id } }).then((r) => setEvolucao(r.data)).catch((e) => setErro(mensagemErro(e)));
+  };
+  useEffect(carregar, [aluno.id]);
+
+  async function salvar(corpo) {
+    try {
+      const { data: r } = await api.post(`/treinos/${corpo.treino_id}/sessoes`, corpo);
+      setSessoes(r);
+      setRegistrando(false);
+      api.get("/evolucao", { params: { aluno_id: aluno.id } }).then((x) => setEvolucao(x.data));
+    } catch (e) {
+      throw mensagemErro(e);
+    }
+  }
+
+  async function excluir(id) {
+    setErro("");
+    try {
+      await api.delete(`/sessoes/${id}`);
+      carregar();
+    } catch (e) {
+      setErro(mensagemErro(e));
+    }
+  }
+
+  return (
+    <>
+      <div className="toolbar" style={{ marginTop: 14 }}>
+        {!registrando && <button className="btn" type="button" onClick={() => setRegistrando(true)}>Registrar treino feito</button>}
+        <div className="err" role="alert">{erro}</div>
+      </div>
+      {registrando && <FormSessao treinos={fichas || []} onSalvar={salvar} onCancelar={() => setRegistrando(false)} />}
+      <ResumoMensal sessoes={sessoes} />
+      <h3 style={{ margin: "18px 0 10px" }}>Evolução por exercício</h3>
+      <GraficoEvolucao evolucao={evolucao} />
+      <h3 style={{ margin: "18px 0 10px" }}>Histórico de sessões</h3>
+      <HistoricoSessoes sessoes={sessoes} onExcluir={excluir} />
     </>
   );
 }

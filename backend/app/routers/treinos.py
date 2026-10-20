@@ -9,8 +9,9 @@ from ..database import get_db
 from ..deps import exige_perfis
 from ..models import Usuario
 from ..reflexao import tabela
-from ..schemas import AtivoIn, ExercicioIn, TreinoIn
+from ..schemas import AtivoIn, ExercicioIn, SessaoIn, TreinoIn
 from ..services.academia import exige_aluno, utc
+from ..services.registros import evolucao_do_aluno, excluir_sessao, registrar_sessao, sessoes_do_aluno
 
 router = APIRouter(tags=["treinos"])
 instrutores = exige_perfis("administrador", "instrutor")
@@ -125,3 +126,31 @@ def arquivar_treino(treino_id: int, dados: AtivoIn, db: Session = Depends(get_db
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Treino não encontrado.")
     db.commit()
     return jsonable_encoder(_fichas(db, linha.aluno_id))
+
+
+# ---- evolução: registros de execução (o que o aluno fez e quanto fez) ----
+
+@router.get("/sessoes")
+def listar_sessoes(aluno_id: int, db: Session = Depends(get_db), _=Depends(instrutores)):
+    exige_aluno(db, aluno_id)
+    return jsonable_encoder(sessoes_do_aluno(db, aluno_id))
+
+
+@router.get("/evolucao")
+def ver_evolucao(aluno_id: int, db: Session = Depends(get_db), _=Depends(instrutores)):
+    exige_aluno(db, aluno_id)
+    return jsonable_encoder(evolucao_do_aluno(db, aluno_id))
+
+
+@router.post("/treinos/{treino_id}/sessoes", status_code=status.HTTP_201_CREATED)
+def registrar_execucao(treino_id: int, dados: SessaoIn, db: Session = Depends(get_db),
+                       usuario: Usuario = Depends(instrutores)):
+    registrar_sessao(db, treino_id, dados, usuario.id)
+    tr = tabela("treinos")
+    aluno_id = db.execute(select(tr.c.aluno_id).where(tr.c.id == treino_id)).scalar_one()
+    return jsonable_encoder(sessoes_do_aluno(db, aluno_id))
+
+
+@router.delete("/sessoes/{sessao_id}", status_code=status.HTTP_204_NO_CONTENT)
+def apagar_sessao(sessao_id: int, db: Session = Depends(get_db), _=Depends(instrutores)):
+    excluir_sessao(db, sessao_id)

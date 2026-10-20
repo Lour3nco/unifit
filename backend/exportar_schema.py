@@ -1,4 +1,4 @@
-"""Gera banco/schema.sql com a estrutura atual do schema "gymIA" (tipos, sequências, tabelas e restrições).
+"""Gera banco/schema.sql com a estrutura atual do schema "unifit" (tipos, sequências, tabelas e restrições).
 
     python exportar_schema.py
 

@@ -8,21 +8,24 @@ const cor = (p) => (p >= 70 ? "var(--risk)" : p >= 55 ? "var(--warn)" : "var(--a
 
 export default function Dashboard() {
   const { usuario } = useAuth();
-  const verBench = ["administrador", "instrutor"].includes(usuario.perfil); // mesmo acesso do backend
   const [d, setD] = useState(null);
   const [erro, setErro] = useState("");
   const [bench, setBench] = useState(null);
   const [erroBench, setErroBench] = useState("");
+  // mesmo acesso do backend; o benchmark só existe quando BENCHMARK_ATIVO=true no servidor
+  const verBench = ["administrador", "instrutor"].includes(usuario.perfil) && !!d?.benchmark_ativo;
 
   useEffect(() => {
     api.get("/dashboard")
       .then((r) => setD(r.data))
       .catch((e) => setErro(mensagemErro(e, "Não foi possível carregar o dashboard.")));
-    if (verBench) {
-      api.get("/dashboard/benchmark")
-        .then((r) => setBench(r.data))
-        .catch((e) => setErroBench(mensagemErro(e, "Não foi possível calcular o benchmark.")));
-    }
+  }, []);
+
+  useEffect(() => {
+    if (!verBench) return;
+    api.get("/dashboard/benchmark")
+      .then((r) => setBench(r.data))
+      .catch((e) => setErroBench(mensagemErro(e, "Não foi possível calcular o benchmark.")));
   }, [verBench]);
 
   if (erro) return <div className="ph">{erro}</div>;
@@ -32,14 +35,12 @@ export default function Dashboard() {
 
   return (
     <>
-      {d.avisos?.length > 0 && (
-        <div className="aviso" role="status">{d.avisos.map((a) => <div key={a}>{a}</div>)}</div>
-      )}
       <div className="kpis">
         <div className="kpi"><small>Alunos ativos</small><strong>{d.alunos_ativos}</strong></div>
         <div className="kpi"><small>Receita do mês</small><strong>{brl(d.receita_mes)}</strong></div>
-        <div className="kpi"><small>Inadimplência</small><strong>{d.inadimplencia_pct}%</strong>
-          <em className="down">{d.pagamentos_atrasados} pagamentos atrasados</em></div>
+        <div className="kpi" title="Alunos com matrícula ativa que têm alguma mensalidade vencida e não paga">
+          <small>Inadimplência</small><strong>{d.inadimplencia_pct}%</strong>
+          <em className="down">dos alunos ativos · {d.pagamentos_atrasados} mensalidade(s) em atraso</em></div>
         <div className="kpi"><small>Check-ins hoje</small><strong>{d.checkins_hoje}</strong></div>
       </div>
 
@@ -64,7 +65,6 @@ export default function Dashboard() {
               <li key={a.id}>
                 <span>{a.nome}</span>
                 <span className="p" style={{ color: cor(a.probabilidade) }}>{a.probabilidade}%</span>
-                <small>{a.motivo}</small>
                 <div className="meter"><i style={{ width: `${a.probabilidade}%`, background: cor(a.probabilidade) }} /></div>
               </li>
             ))}

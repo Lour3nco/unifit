@@ -24,7 +24,9 @@ with SessionLocal() as db:
     print("senha confere:", verificar_senha(senha, u.senha_hash))
 
     if input("\nRedefinir a senha deste usuário? (s/n) ").strip().lower() == "s":
-        nova = getpass.getpass("Nova senha (mín. 6 caracteres): ")
+        nova = getpass.getpass("Nova senha (mín. 8 caracteres): ")
+        if len(nova) < 8:
+            raise SystemExit("A senha precisa ter pelo menos 8 caracteres.")
         u.senha_hash = hash_senha(nova)
         u.ativo = True
         db.commit()

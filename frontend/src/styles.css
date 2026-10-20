@@ -19,14 +19,14 @@ input{padding:12px 14px;border:1px solid var(--line);border-radius:8px;backgroun
 .stage svg{width:min(440px,100%);height:auto;font-family:Archivo,sans-serif}
 .stage .cap{position:absolute;left:32px;bottom:28px;font-size:14px;opacity:.8;max-width:34ch}
 .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow:auto}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;height:100dvh;overflow:auto}
 aside .brand{padding:0 10px 16px}
 nav button{display:block;width:100%;text-align:left;background:none;border:0;padding:11px 12px;border-radius:8px;cursor:pointer;color:var(--mute);font-weight:500}
 nav button:hover{background:var(--bg)}
 nav button[aria-current="page"]{background:var(--acc);color:var(--acc-ink);font-weight:700}
 .who{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--line);font-size:14px}
 .who small{display:block;color:var(--mute);text-transform:capitalize}
-.who button{margin-top:8px;background:none;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.who button{margin-top:8px;background:none;color:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
 main{padding:28px clamp(16px,3vw,40px);min-width:0}
 .top{margin-bottom:22px}
 .top h2{margin:0;font-size:30px;letter-spacing:-.02em;font-weight:800}
@@ -51,10 +51,19 @@ ul.risk small{color:var(--mute);grid-column:1}
 .bench .row{display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:center;font-size:14px}
 .bench .row i{display:block;height:14px;border-radius:4px}
 .ph{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:40px;color:var(--mute)}
+/* tela cheia quando o sistema não carrega (servidor fora do ar) */
+.erro-pagina{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:24px 16px;text-align:center}
+.erro-pagina .brand{margin-bottom:12px}
+.erro-pagina .codigo{font-size:clamp(72px,18vw,128px);font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--acc)}
+.erro-pagina h1{margin:4px 0 0;font-size:24px;font-weight:800}
+.erro-pagina p{margin:0 0 12px;max-width:420px;color:var(--mute)}
 @media(max-width:900px){
 .login{grid-template-columns:1fr}.stage{min-height:300px;order:-1}
 .app{grid-template-columns:1fr}
-aside{position:fixed;inset:0 auto 0 0;width:260px;z-index:5;transform:translateX(-100%);transition:transform .2s}
+/* no celular, 100vh inclui a área atrás da barra do navegador e cortava o "Sair": a altura vem de top/bottom */
+aside{position:fixed;inset:0 auto 0 0;height:auto;width:260px;z-index:5;transform:translateX(-100%);transition:transform .2s;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 aside.open{transform:none}
 .menu{display:inline-block}
 .kpis{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
@@ -132,4 +141,32 @@ label.inline{display:flex;align-items:center;gap:8px}
 .alerta.ok{border-color:var(--ok)}
 .alerta.ok b{background:var(--ok)}
 img.quadro{display:block;width:100%;max-width:480px;border-radius:10px;border:1px solid var(--line)}
-@media(max-width:900px){.item{grid-template-columns:28px 1fr 1fr}.item>label:first-of-type{grid-column:2/-1}.item .acoes{grid-column:1/-1}}
+@media(max-width:900px){.item{grid-template-columns:1fr 1fr}.item .n{display:none}.item>label:first-of-type{grid-column:1/-1}.item .acoes{grid-column:1/-1}}
+
+/* ---- Responsivo: tablets e smartphones ---- */
+html,body{overflow-x:hidden}  /* trava rolagem horizontal acidental em telas estreitas */
+
+/* fundo escuro que fecha o menu lateral ao tocar fora (só com o menu aberto no mobile) */
+.backdrop{display:none}
+@media(max-width:900px){.backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:4}}
+
+/* alvos de toque maiores em telas sensíveis ao toque (celulares e tablets) */
+@media(pointer:coarse){
+  nav button{padding:13px 12px}
+  .btn-sec,.who button{min-height:40px}
+  select.compacto,.btn.compacto{min-height:40px}
+}
+
+/* celulares: aperta espaçamentos, reduz títulos grandes e esconde a arte do login */
+@media(max-width:560px){
+  main{padding:18px 16px}
+  .top h2{font-size:24px}
+  .kpis{gap:10px}
+  .kpi{padding:14px}
+  .kpi strong,.mini-kpis strong{font-size:22px}
+  .card{padding:14px}
+  .card-topo{flex-wrap:wrap}
+  .presenca strong{font-size:20px}
+  .plano .preco{font-size:22px}
+  .stage{display:none}
+}

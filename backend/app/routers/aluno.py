@@ -1,7 +1,5 @@
-"""Área do aluno. RN04: o aluno só enxerga os próprios dados (tudo parte do usuário logado).
-Lê as tabelas por reflexão e aceita nomes de coluna alternativos; o que não puder ser lido vai em "avisos"."""
+"""Área do aluno. RN04: o aluno só enxerga os próprios dados (tudo parte do usuário logado)."""
 # pyright: reportMissingImports=false
-import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,42 +10,15 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import exige_perfis
 from ..models import Usuario
-from ..reflexao import coluna, tabela
-from ..schemas import AssinarPlanoIn, DadosAlunoIn, PagarIn
-from ..services.academia import (FORMAS, checkin_aberto, criar_matricula, planos_ativos, quitar,
+from ..reflexao import tabela
+from ..schemas import AssinarPlanoIn, DadosAlunoIn, PagarIn, SessaoIn
+from ..services.academia import (FORMAS, checkin_aberto, criar_matricula, informar_pagamento, planos_ativos,
                                  registrar_entrada, registrar_saida, salvar_aluno, utc)
 from ..services.alunos import aluno_do_usuario
+from ..services.registros import evolucao_do_aluno, excluir_sessao, registrar_sessao, sessoes_do_aluno
 
-log = logging.getLogger("gymai")
 router = APIRouter(prefix="/meu", tags=["area do aluno"])
 so_aluno = exige_perfis("aluno")
-
-
-def _pk(t):
-    return next(iter(t.primary_key.columns))
-
-
-def _falta(*itens):
-    if any(i is None for i in itens):
-        raise LookupError("tabela ou coluna não encontrada")
-
-
-def _get(m, *nomes):
-    for n in nomes:
-        if n in m and m[n] is not None:
-            return m[n]
-    return None
-
-
-def _seguro(db: Session, avisos: list, rotulo_: str, fn, padrao):
-    try:
-        return fn()
-    except Exception as erro:
-        db.rollback()
-        log.warning("area do aluno/%s: %s", rotulo_, erro)
-        avisos.append(f"Não foi possível carregar “{rotulo_}”.")
-        return padrao
-
 
 CAMPOS_ALUNO = ("cpf", "data_nascimento", "sexo", "telefone", "altura_cm", "peso_kg")
 
@@ -58,138 +29,98 @@ def _perfil(aluno: dict | None) -> dict:
 
 
 def _matricula(db: Session, aluno_id):
-    mat = tabela("matriculas")
-    al = coluna(mat, "aluno_id")
-    _falta(mat, al)
-    ini = coluna(mat, "data_inicio", "inicio")
-    ordem = ini if ini is not None else _pk(mat)
-    linha = db.execute(select(mat).where(al == aluno_id).order_by(ordem.desc()).limit(1)).first()
-    if not linha:
-        return None
-    m = linha._mapping
-    plano, valor = None, None
-    planos, pf = tabela("planos"), coluna(mat, "plano_id")
-    if planos is not None and pf is not None and m[pf.name] is not None:
-        p = db.execute(select(planos).where(_pk(planos) == m[pf.name])).first()
-        if p:
-            plano, valor = p._mapping.get("nome"), p._mapping.get("valor")
-    return {"plano": plano, "valor": valor,
-            "inicio": _get(m, "data_inicio", "inicio"),
-            "fim": _get(m, "data_fim", "fim", "data_vencimento", "vencimento"),
-            "status": str(_get(m, "status", "situacao") or "").lower()}
-
-
-def _ids_matriculas(db: Session, aluno_id) -> list:
-    mat = tabela("matriculas")
-    al = coluna(mat, "aluno_id")
-    _falta(mat, al)
-    return [l[0] for l in db.execute(select(_pk(mat)).where(al == aluno_id)).all()]
+    """Matrícula mais recente, com o plano."""
+    mat, planos = tabela("matriculas"), tabela("planos")
+    linha = db.execute(
+        select(planos.c.nome.label("plano"), planos.c.valor, mat.c.data_inicio.label("inicio"),
+               mat.c.data_fim.label("fim"), mat.c.status)
+        .select_from(mat.join(planos, planos.c.id == mat.c.plano_id))
+        .where(mat.c.aluno_id == aluno_id).order_by(mat.c.data_inicio.desc(), mat.c.id.desc()).limit(1)).first()
+    return {**dict(linha._mapping), "status": str(linha.status)} if linha else None
 
 
 def _pagamentos(db: Session, aluno_id):
-    pag = tabela("pagamentos")
-    mf = coluna(pag, "matricula_id")
-    venc = coluna(pag, "vencimento", "data_vencimento")
-    _falta(pag, mf)
-    ids = _ids_matriculas(db, aluno_id)
-    if not ids:
-        return []
-    ordem = venc if venc is not None else _pk(pag)
-    linhas = db.execute(select(pag).where(mf.in_(ids)).order_by(ordem.desc()).limit(12)).all()
-    saida = []
-    for l in linhas:
-        m = l._mapping
-        saida.append({"id": m[_pk(pag).name],
-                      "valor": _get(m, "valor", "valor_pago"),
-                      "forma": _get(m, "forma_pagamento"),
-                      "vencimento": _get(m, "vencimento", "data_vencimento"),
-                      "pago_em": _get(m, "data_pagamento", "pago_em"),
-                      "status": str(_get(m, "status", "situacao") or "").lower()})
-    return saida
+    pag, mat = tabela("pagamentos"), tabela("matriculas")
+    linhas = db.execute(
+        select(pag).select_from(pag.join(mat, mat.c.id == pag.c.matricula_id))
+        .where(mat.c.aluno_id == aluno_id).order_by(pag.c.data_vencimento.desc(), pag.c.id.desc()).limit(12)).all()
+    return [{"id": l.id, "valor": l.valor, "forma": l.forma_pagamento, "vencimento": l.data_vencimento,
+             "pago_em": l.data_pagamento, "informado_em": utc(l.informado_em), "informado_forma": l.informado_forma,
+             "status": str(l.status)} for l in linhas]
 
 
 def _checkins(db: Session, aluno_id):
     chk = tabela("checkins")
-    af = coluna(chk, "aluno_id")
-    dt = coluna(chk, "data_hora", "data_checkin", "data", "criado_em", "created_at")
-    _falta(chk, af, dt)
-    desde = func.now() - timedelta(days=30)
-    total = db.scalar(select(func.count()).select_from(chk).where(af == aluno_id, dt >= desde)) or 0
-    recentes = [utc(l[0]) for l in db.execute(select(dt).where(af == aluno_id).order_by(dt.desc()).limit(10)).all()]
-    return {"ultimos_30_dias": total, "recentes": recentes}
+    total = db.scalar(select(func.count()).select_from(chk).where(
+        chk.c.aluno_id == aluno_id, chk.c.data_hora >= func.now() - timedelta(days=30))) or 0
+    recentes = db.scalars(select(chk.c.data_hora).where(chk.c.aluno_id == aluno_id)
+                          .order_by(chk.c.data_hora.desc()).limit(10)).all()
+    return {"ultimos_30_dias": total, "recentes": [utc(r) for r in recentes]}
 
 
 @router.get("/resumo")
 def resumo(db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
-    avisos: list = []
-    base = {"usuario": {"nome": usuario.nome, "email": usuario.email}, "avisos": avisos,
-            "vinculado": False, "numero_matricula": None, "perfil": _perfil(None), "matricula": None, "pagamentos": [],
+    base = {"usuario": {"nome": usuario.nome, "email": usuario.email}, "vinculado": False,
+            "numero_matricula": None, "perfil": _perfil(None), "matricula": None, "pagamentos": [],
             "checkins": {"ultimos_30_dias": 0, "recentes": []}}
-    aluno = _seguro(db, avisos, "dados cadastrais", lambda: aluno_do_usuario(db, usuario), None)
-    if aluno is None:
+    aluno = aluno_do_usuario(db, usuario)
+    if aluno is None:  # conta ainda sem ficha: o aluno cria em "Meus dados"
         return jsonable_encoder(base)
-    aluno_id = aluno[_pk(tabela("alunos")).name]
-    base["vinculado"] = True
-    base["perfil"] = _perfil(aluno)
-    base["numero_matricula"] = aluno.get("numero_matricula")
-    base["matricula"] = _seguro(db, avisos, "matrícula", lambda: _matricula(db, aluno_id), None)
-    base["pagamentos"] = _seguro(db, avisos, "pagamentos", lambda: _pagamentos(db, aluno_id), [])
-    base["checkins"] = _seguro(db, avisos, "check-ins", lambda: _checkins(db, aluno_id), base["checkins"])
-    return jsonable_encoder(base)
+    return jsonable_encoder({**base, "vinculado": True, "perfil": _perfil(aluno),
+                             "numero_matricula": aluno["numero_matricula"],
+                             "matricula": _matricula(db, aluno["id"]), "pagamentos": _pagamentos(db, aluno["id"]),
+                             "checkins": _checkins(db, aluno["id"])})
 
 
 def _treinos(db: Session, aluno_id):
-    tr, itens, ex = tabela("treinos"), tabela("treino_itens"), tabela("exercicios")
-    af = coluna(tr, "aluno_id")
-    _falta(tr, af)
-    q = select(tr).where(af == aluno_id)
-    if coluna(tr, "ativo") is not None:  # treinos arquivados pelo instrutor não aparecem
-        q = q.where(tr.c.ativo.is_(True))
-    treinos = db.execute(q.order_by(_pk(tr).desc()).limit(10)).all()
-    tf = coluna(itens, "treino_id")
-    ef = coluna(itens, "exercicio_id")
-    ordem = coluna(itens, "ordem")
-    nomes_ex: dict = {}
-    todos_itens: dict = {}
-    if itens is not None and tf is not None and treinos:
-        ids = [t._mapping[_pk(tr).name] for t in treinos]
-        q = select(itens).where(tf.in_(ids)).order_by(ordem if ordem is not None else _pk(itens))
-        for l in db.execute(q).all():
-            todos_itens.setdefault(l._mapping[tf.name], []).append(l._mapping)
-        if ex is not None and ef is not None:
-            ex_ids = {m[ef.name] for lista in todos_itens.values() for m in lista if m[ef.name] is not None}
-            nome_ex = coluna(ex, "nome", "titulo")
-            if ex_ids and nome_ex is not None:
-                nomes_ex = dict(db.execute(select(_pk(ex), nome_ex).where(_pk(ex).in_(ex_ids))).all())
-    saida = []
-    for t in treinos:
-        m = t._mapping
-        tid = m[_pk(tr).name]
-        saida.append({
-            "id": tid,
-            "nome": _get(m, "nome", "titulo", "descricao") or f"Treino #{tid}",
-            "objetivo": _get(m, "objetivo"),
-            "itens": [{"exercicio": nomes_ex.get(i[ef.name]) if ef is not None else None,
-                       "series": _get(i, "series", "qtd_series", "num_series"),
-                       "repeticoes": _get(i, "repeticoes", "reps", "qtd_repeticoes"),
-                       "carga": _get(i, "carga_kg", "carga", "peso"),
-                       "descanso": _get(i, "descanso_seg"),
-                       "obs": _get(i, "observacao", "observacoes")} for i in todos_itens.get(tid, [])],
-        })
-    return saida
+    """Fichas ativas (as arquivadas pelo instrutor não aparecem), com os exercícios em ordem."""
+    tr, it, ex = tabela("treinos"), tabela("treino_itens"), tabela("exercicios")
+    treinos = db.execute(select(tr.c.id, tr.c.nome, tr.c.objetivo).where(tr.c.aluno_id == aluno_id, tr.c.ativo.is_(True))
+                         .order_by(tr.c.id.desc()).limit(10)).all()
+    itens: dict = {}
+    if treinos:
+        for l in db.execute(select(it, ex.c.nome.label("exercicio"))
+                            .select_from(it.join(ex, ex.c.id == it.c.exercicio_id))
+                            .where(it.c.treino_id.in_([t.id for t in treinos])).order_by(it.c.treino_id, it.c.ordem)).all():
+            itens.setdefault(l.treino_id, []).append(
+                {"exercicio_id": l.exercicio_id, "exercicio": l.exercicio, "series": l.series,
+                 "repeticoes": l.repeticoes, "carga": l.carga_kg, "descanso": l.descanso_seg})
+    return [{"id": t.id, "nome": t.nome, "objetivo": t.objetivo, "itens": itens.get(t.id, [])} for t in treinos]
 
 
 @router.get("/treinos")
 def meus_treinos(db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
-    avisos: list = []
-    aluno = _seguro(db, avisos, "cadastro do aluno", lambda: aluno_do_usuario(db, usuario), None)
+    aluno = aluno_do_usuario(db, usuario)
     if aluno is None:
-        return {"vinculado": False, "treinos": [], "avisos": avisos}
-    aluno_id = aluno[_pk(tabela("alunos")).name]
-    treinos = _seguro(db, avisos, "treinos", lambda: _treinos(db, aluno_id), [])
-    return jsonable_encoder({"vinculado": True, "treinos": treinos, "avisos": avisos})
+        return {"vinculado": False, "treinos": []}
+    return jsonable_encoder({"vinculado": True, "treinos": _treinos(db, aluno["id"])})
 
-# ---- Ações do aluno: editar dados, check-in/check-out e pagamentos de exemplo ----
+
+# ---- Evolução: o aluno registra o que fez e acompanha o próprio progresso ----
+
+@router.get("/sessoes")
+def minhas_sessoes(db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    return jsonable_encoder(sessoes_do_aluno(db, _aluno(db, usuario)["id"]))
+
+
+@router.get("/evolucao")
+def minha_evolucao(db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    return jsonable_encoder(evolucao_do_aluno(db, _aluno(db, usuario)["id"]))
+
+
+@router.post("/treinos/{treino_id}/sessoes", status_code=status.HTTP_201_CREATED)
+def registrar_meu_treino(treino_id: int, dados: SessaoIn, db: Session = Depends(get_db),
+                         usuario: Usuario = Depends(so_aluno)):
+    aluno_id = _aluno(db, usuario)["id"]
+    registrar_sessao(db, treino_id, dados, usuario.id, aluno_id=aluno_id)
+    return jsonable_encoder(sessoes_do_aluno(db, aluno_id))
+
+
+@router.delete("/sessoes/{sessao_id}", status_code=status.HTTP_204_NO_CONTENT)
+def apagar_minha_sessao(sessao_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    excluir_sessao(db, sessao_id, aluno_id=_aluno(db, usuario)["id"])
+
+# ---- Ações do aluno: editar dados, check-in/check-out e informar pagamentos ----
 
 def _aluno(db: Session, usuario: Usuario) -> dict:
     aluno = aluno_do_usuario(db, usuario)
@@ -225,7 +156,8 @@ def meus_checkins(db: Session = Depends(get_db), usuario: Usuario = Depends(so_a
 
 @router.post("/checkin", status_code=status.HTTP_201_CREATED)
 def fazer_checkin(db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
-    registrar_entrada(db, _aluno(db, usuario)["id"])
+    """Pelo app: precisa ter plano ativo e estar sem mensalidade em atraso."""
+    registrar_entrada(db, _aluno(db, usuario)["id"], pelo_app=True)
     return meus_checkins(db, usuario)
 
 
@@ -246,8 +178,8 @@ def assinar_plano(dados: AssinarPlanoIn, db: Session = Depends(get_db), usuario:
     return {"mensagem": f"Plano {nome} contratado. Pague a primeira mensalidade para concluir."}
 
 
-@router.post("/pagamentos/{pagamento_id}/pagar")
-def pagar(pagamento_id: int, dados: PagarIn, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
-    """Pagamento de EXEMPLO: nenhuma cobrança real é feita, só marca como pago."""
-    quitar(db, pagamento_id, dados.forma, aluno_id=_aluno(db, usuario)["id"])
-    return {"mensagem": f"Pagamento confirmado via {FORMAS[dados.forma]} (exemplo, sem cobrança real)."}
+@router.post("/pagamentos/{pagamento_id}/informar")
+def informar(pagamento_id: int, dados: PagarIn, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    """O aluno avisa que pagou. Só a recepção dá a baixa (não há gateway de pagamento integrado)."""
+    informar_pagamento(db, pagamento_id, dados.forma, _aluno(db, usuario)["id"])
+    return {"mensagem": f"Pagamento via {FORMAS[dados.forma]} informado. A recepção vai confirmar o recebimento."}

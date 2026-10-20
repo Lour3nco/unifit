@@ -1,8 +1,9 @@
 """Previsão de evasão: rede neural em PyTorch, treinada e executada em GPU (CUDA).
 
-Entradas (RN07 / seção 12.1): check-ins 30d, check-ins período anterior, dias sem treinar,
-atrasos de pagamento, meses de matrícula, valor do plano.
-Dados de treino: conjunto sintético (gerar_dataset), menos frequência e mais atrasos => mais risco.
+Entradas (RN07 / seção 12.1): frequência nos últimos 30d, frequência no período anterior (ambas em
+check-ins por 30 dias), dias sem treinar, atrasos de pagamento, meses de matrícula, valor mensal do plano.
+Dados de treino: conjunto sintético (gerar_dataset), menos frequência, queda de frequência, mais dias
+sem treinar e mais atrasos => mais risco.
 """
 import os
 import tempfile
@@ -13,7 +14,8 @@ import numpy as np
 import torch
 from torch import nn
 
-MODEL_PATH = os.getenv("CHURN_MODEL_PATH", os.path.join(tempfile.gettempdir(), "churn_model.pt"))
+# o nome leva a versão: mudar gerar_dataset exige um arquivo novo, senão o modelo antigo é reaproveitado
+MODEL_PATH = os.getenv("CHURN_MODEL_PATH", os.path.join(tempfile.gettempdir(), "churn_model_v2.pt"))
 ESCALA = np.array([30, 30, 30, 5, 24, 300], dtype=np.float32)
 
 
@@ -25,12 +27,16 @@ def gerar_dataset(n: int = 20000, seed: int = 42):
     rng = np.random.default_rng(seed)
     c30 = rng.integers(0, 31, n)
     cprev = rng.integers(0, 31, n)
-    dias = np.clip(30 - c30 + rng.integers(-5, 6, n), 0, 30)
+    # dias sem treinar: em geral segue o intervalo médio entre treinos (30 / frequência), mas 20% "pararam
+    # de vir" há pouco tempo, para a rede também ver quem treinava bem e sumiu
+    dias = np.where(rng.random(n) < 0.8, rng.exponential(30 / (c30 + 1)), rng.uniform(0, 30, n))
+    dias = np.clip(np.round(dias), 0, 30)
     atrasos = rng.integers(0, 5, n)
     meses = rng.integers(1, 25, n)
     valor = rng.uniform(80, 300, n)
-    logit = (1.5 - 0.18 * c30 + 0.05 * (cprev - c30) + 0.07 * dias
-             + 0.6 * atrasos - 0.04 * meses + 0.004 * (valor - 150))
+    # aluno que treina 3x/semana, em dia e sem atrasos fica perto de 10-15%; quem sumiu há 30 dias, acima de 90%
+    logit = (-0.15 * c30 + 0.05 * np.maximum(cprev - c30, 0) + 0.10 * dias
+             + 0.7 * atrasos - 0.05 * meses + 0.004 * (valor - 120))
     y = rng.random(n) < 1 / (1 + np.exp(-logit))
     X = np.stack([c30, cprev, dias, atrasos, meses, valor], axis=1).astype(np.float32) / ESCALA
     return X, y.astype(np.float32)

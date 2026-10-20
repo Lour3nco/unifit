@@ -26,7 +26,7 @@ DB_PORT = int(os.getenv("DB_PORT", "5432"))
 DB_NAME = os.getenv("DB_NAME", "postgres")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")  # RNF05: nunca deixar senha no código
-DB_SCHEMA = os.getenv("DB_SCHEMA", "gymIA")
+DB_SCHEMA = os.getenv("DB_SCHEMA", "unifit")
 
 if not DB_HOST or not DB_PASSWORD:
     raise RuntimeError("Defina DB_HOST e DB_PASSWORD no arquivo .env (veja o .env.example).")
@@ -50,7 +50,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False)
 
 
 class Base(DeclarativeBase):
-    metadata = MetaData(schema=DB_SCHEMA)  # todas as tabelas ficam no schema "gymIA"
+    metadata = MetaData(schema=DB_SCHEMA)  # todas as tabelas ficam no schema "unifit"
 
 
 def get_db():

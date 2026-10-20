@@ -1,4 +1,4 @@
-"""Perfis de usuário. O banco tem o enum "gymIA".perfil_usuario; aqui lemos os valores reais
+"""Perfis de usuário. O banco tem o enum "unifit".perfil_usuario; aqui lemos os valores reais
 e traduzimos para os nomes usados na API e no frontend (administrador, recepcao, instrutor, aluno)."""
 import unicodedata
 from functools import lru_cache

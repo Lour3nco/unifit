@@ -95,7 +95,14 @@ def mudar_status(matricula_id: int, dados: MatriculaStatusIn, db: Session = Depe
         vigente = matricula_vigente(db, linha.aluno_id, ignorar_id=matricula_id)
         if vigente:
             raise erro_vigente(vigente)
-    db.execute(update(mat).where(mat.c.id == matricula_id).values(status=dados.status))
+        # outra "ativa" já vencida do mesmo aluno é encerrada (o banco só aceita uma ativa por aluno)
+        db.execute(update(mat).where(mat.c.aluno_id == linha.aluno_id, mat.c.id != matricula_id,
+                                     mat.c.status == "ativa", mat.c.data_fim < hoje()).values(status="encerrada"))
+    try:
+        db.execute(update(mat).where(mat.c.id == matricula_id).values(status=dados.status))
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um plano ativo para este aluno.")
     canceladas = 0
     if dados.status in ("cancelada", "encerrada"):
         canceladas = db.execute(update(pag).where(pag.c.matricula_id == matricula_id, pag.c.status.in_(EM_ABERTO))

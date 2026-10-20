@@ -7,6 +7,7 @@ export default function CheckinRecepcao() {
   const [r, setR] = useState(null);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
+  const [aviso, setAviso] = useState("");
   const [versao, setVersao] = useState(0);
   const [enviando, setEnviando] = useState(false);
 
@@ -15,12 +16,13 @@ export default function CheckinRecepcao() {
   }, []);
 
   async function registrar(aluno_id, nome, saida) {
-    setErro(""); setMsg("");
+    setErro(""); setMsg(""); setAviso("");
     setEnviando(true);
     try {
       const { data } = await api.post(saida ? "/checkins/saida" : "/checkins", { aluno_id });
       setR(data);
       setMsg(`${saida ? "Check-out" : "Check-in"} de ${nome} registrado.`);
+      if (data.aviso) setAviso(`${nome}: ${data.aviso}`);
       setVersao((v) => v + 1);
     } catch (e) {
       setErro(mensagemErro(e));
@@ -43,11 +45,14 @@ export default function CheckinRecepcao() {
             {!a.vigente && !a.na_academia && <small className="down">sem plano ativo</small>}
             {a.na_academia
               ? <button type="button" className="btn-sec" disabled={enviando} onClick={() => registrar(a.id, a.nome, true)}>Check-out</button>
-              : <button type="button" className="btn compacto" disabled={enviando} onClick={() => registrar(a.id, a.nome, false)}>Check-in</button>}
+              : <button type="button" className="btn compacto" disabled={enviando || !a.vigente}
+                  title={a.vigente ? undefined : "Faça uma nova matrícula antes do check-in"}
+                  onClick={() => registrar(a.id, a.nome, false)}>Check-in</button>}
           </div>
         )} />
         <div className="err" role="alert">{erro}</div>
         {msg && <div className="okmsg" role="status">{msg}</div>}
+        {aviso && <div className="aviso" role="alert" style={{ marginTop: 8, marginBottom: 0 }}>{aviso}</div>}
       </section>
 
       <section className="card" style={{ marginTop: 14 }}>

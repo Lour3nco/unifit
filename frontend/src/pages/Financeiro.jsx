@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import api, { mensagemErro } from "../api";
-import { data, moeda } from "../formato";
+import { data, dataHora, moeda } from "../formato";
 
-const FILTROS = [["", "Todas"], ["pendente", "Pendentes"], ["atrasado", "Em atraso"], ["pago", "Pagas"], ["cancelado", "Canceladas"]];
+const FILTROS = [["", "Todas"], ["informado", "Informadas pelo aluno"], ["pendente", "Pendentes"], ["atrasado", "Em atraso"],
+  ["pago", "Pagas"], ["cancelado", "Canceladas"]];
 const ROTULO = { pendente: "Pendente", atrasado: "Em atraso", pago: "Pago", cancelado: "Cancelado" };
 const FORMAS = [["dinheiro", "Dinheiro"], ["pix", "Pix"], ["cartao", "Cartão de crédito"], ["boleto", "Boleto"]];
+// o informe do aluno vem com o nome da forma ("Pix"); a baixa usa a chave ("pix")
+const formaDoInforme = (nome) => (FORMAS.find(([, n]) => n === nome) || FORMAS[0])[0];
 
 export default function Financeiro() {
   const [situacao, setSituacao] = useState("");
@@ -42,7 +45,11 @@ export default function Financeiro() {
     <>
       <div className="kpis">
         <div className="kpi"><small>Recebido no mês</small><strong>{s ? moeda(s.recebido_mes) : "—"}</strong></div>
-        <div className="kpi"><small>A receber</small><strong>{s ? moeda(s.a_receber) : "—"}</strong></div>
+        <div className="kpi"><small>A receber</small><strong>{s ? moeda(s.a_receber) : "—"}</strong>
+          {s?.qtd_informados > 0 && (
+            <em><button type="button" className="linkbtn" onClick={() => setSituacao("informado")}>
+              {s.qtd_informados} pagamento(s) para confirmar</button></em>
+          )}</div>
         <div className="kpi"><small>Em atraso</small><strong>{s ? moeda(s.em_atraso) : "—"}</strong>
           {s?.qtd_atraso > 0 && <em className="down">{s.qtd_atraso} mensalidade(s)</em>}</div>
       </div>
@@ -67,12 +74,25 @@ export default function Financeiro() {
                 return (
                   <tr key={p.id}>
                     <td>{p.aluno}</td><td>{p.plano}</td><td>{data(p.data_vencimento)}</td><td>{moeda(p.valor)}</td>
-                    <td><span className={`chip ${p.status}`}>{ROTULO[p.status] || p.status}</span></td>
+                    <td><span className={`chip ${p.status}`}>{ROTULO[p.status] || p.status}</span>
+                      {aberto && p.informado_em && (
+                        <small className="hint" style={{ display: "block" }}>
+                          Aluno informou {p.informado_forma} em {dataHora(p.informado_em)}</small>
+                      )}</td>
                     <td>{p.data_pagamento ? `${data(p.data_pagamento)} · ${p.forma_pagamento || ""}` : "—"}</td>
                     <td>
                       {aberto && recebendo !== p.id && (
                         <div className="acoes">
-                          <button className="btn compacto" type="button" onClick={() => { setRecebendo(p.id); setForma("dinheiro"); }}>Receber</button>
+                          <button className="btn compacto" type="button"
+                            onClick={() => { setRecebendo(p.id); setForma(formaDoInforme(p.informado_forma)); }}>
+                            {p.informado_em ? "Confirmar" : "Receber"}</button>
+                          {p.informado_em && (
+                            <button className="btn-sec" type="button"
+                              onClick={() => window.confirm(`Recusar o pagamento informado por ${p.aluno}? A mensalidade continua em aberto.`)
+                                && acao(() => api.post(`/pagamentos/${p.id}/recusar-informe`))}>
+                              Recusar
+                            </button>
+                          )}
                           <button className="btn-sec perigo" type="button"
                             onClick={() => window.confirm(`Cancelar a mensalidade de ${p.aluno}?`) && acao(() => api.post(`/pagamentos/${p.id}/cancelar`))}>
                             Cancelar
@@ -96,7 +116,7 @@ export default function Financeiro() {
             </tbody>
           </table>
         </div>
-        <p className="hint">Recebimento de exemplo: não há integração com banco ou maquininha.</p>
+        <p className="hint">Sem integração com banco ou maquininha: confira o recebimento antes de confirmar um pagamento informado pelo aluno.</p>
       </section>
     </>
   );

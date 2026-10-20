@@ -23,7 +23,14 @@ export default function MeusDados() {
   if (erro) return <div className="ph">{erro}</div>;
   if (!r) return <div className="ph">Carregando seus dados...</div>;
 
-  const proximo = [...r.pagamentos].reverse().find((p) => ["pendente", "atrasado", "atrasada"].includes(p.status));
+  // cobrança realmente em aberto (pendente/atrasada)
+  const emAberto = [...r.pagamentos].reverse().find((p) => ["pendente", "atrasado", "atrasada"].includes(p.status));
+  // sem nada em aberto: mostramos a renovação a vencer no fim da matrícula (só exibição, não cria cobrança)
+  const m = r.matricula;
+  const hojeStr = new Date().toLocaleDateString("sv-SE");
+  const renovacao = !emAberto && m && m.status === "ativa" && m.fim
+    ? { valor: m.valor, vencimento: m.fim, vencida: String(m.fim).slice(0, 10) < hojeStr }
+    : null;
 
   return (
     <>
@@ -34,15 +41,16 @@ export default function MeusDados() {
           Complete e salve seus dados no fim da página para liberar check-in, pagamentos e treinos.
         </div>
       )}
-      {r.avisos.length > 0 && <div className="aviso" role="status">{r.avisos.map((a) => <div key={a}>{a}</div>)}</div>}
 
       <div className="kpis">
         <div className="kpi"><small>Plano</small><strong>{r.matricula?.plano || "—"}</strong>
           {r.matricula && <em><span className={`chip ${r.matricula.status}`}>{rotuloStatus(r.matricula.status)}</span></em>}</div>
         <div className="kpi"><small>Matrícula válida até</small><strong>{data(r.matricula?.fim)}</strong></div>
         <div className="kpi"><small>Próximo pagamento</small>
-          <strong>{proximo ? moeda(proximo.valor) : "Em dia"}</strong>
-          {proximo && <em className={proximo.status.startsWith("atras") ? "down" : ""}>vence em {data(proximo.vencimento)}</em>}</div>
+          <strong>{emAberto ? moeda(emAberto.valor) : renovacao ? moeda(renovacao.valor) : "Em dia"}</strong>
+          {emAberto
+            ? <em className={emAberto.status.startsWith("atras") ? "down" : ""}>vence em {data(emAberto.vencimento)}</em>
+            : renovacao && <em className={renovacao.vencida ? "down" : ""}>{renovacao.vencida ? "venceu em" : "a vencer em"} {data(renovacao.vencimento)}</em>}</div>
         <div className="kpi"><small>Check-ins em 30 dias</small><strong>{r.checkins.ultimos_30_dias}</strong></div>
       </div>
 

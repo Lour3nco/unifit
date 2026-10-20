@@ -16,7 +16,7 @@ class LoginIn(BaseModel):
 class CadastroIn(BaseModel):
     nome: str = Field(min_length=2, max_length=120)
     email: EmailStr
-    senha: str = Field(min_length=6, max_length=72)
+    senha: str = Field(min_length=8, max_length=72)
 
 
 class CadastroAlunoIn(CadastroIn):
@@ -83,7 +83,7 @@ class DashboardOut(BaseModel):
     checkins_por_dia: list[CheckinDia]
     alunos_em_risco: list[AlunoRisco]
     dispositivo_ia: str
-    avisos: list[str] = []
+    benchmark_ativo: bool = False
 
 
 def cpf_valido(cpf: str) -> bool:
@@ -206,3 +206,32 @@ class TreinoIn(BaseModel):
 
 class AtivoIn(BaseModel):
     ativo: bool
+
+
+class SessaoItemIn(BaseModel):
+    """O que o aluno fez em um exercício da sessão (campos vazios = não registrado)."""
+    exercicio_id: int
+    series: int | None = Field(None, ge=0, le=50)
+    repeticoes: int | None = Field(None, ge=0, le=500)
+    carga_kg: float | None = Field(None, ge=0, le=1000)
+
+
+class SessaoIn(BaseModel):
+    """Registro de uma sessão executada (o que fez e quanto fez)."""
+    treino_id: int
+    data: date | None = None  # dia da execução; vazio = agora
+    observacao: str | None = Field(None, max_length=500)
+    itens: list[SessaoItemIn] = Field(min_length=1, max_length=30)
+
+
+class ApiKeyCriarIn(BaseModel):
+    """Criação de uma API key. expira_em opcional (vazio = não expira)."""
+    nome: str = Field(min_length=2, max_length=80)
+    expira_em: date | None = None
+
+    @field_validator("expira_em")
+    @classmethod
+    def _expira(cls, v):
+        if v is not None and v < date.today():
+            raise ValueError("A data de expiração não pode ser no passado.")
+        return v

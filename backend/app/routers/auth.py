@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import math
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .. import limite
 from ..database import get_db
 from ..deps import usuario_atual
 from ..models import Usuario
@@ -26,10 +30,18 @@ def _token(u: Usuario) -> TokenOut:
 
 
 @router.post("/login", response_model=TokenOut)  # RF01
-def login(dados: LoginIn, db: Session = Depends(get_db)):
-    u = db.scalar(select(Usuario).where(func.lower(Usuario.email) == dados.email.lower()))
+def login(dados: LoginIn, request: Request, db: Session = Depends(get_db)):
+    email, ip = dados.email.lower(), request.client.host if request.client else "?"
+    espera = limite.segundos_bloqueado(email, ip)
+    if espera:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                            f"Muitas tentativas de login. Tente de novo em {math.ceil(espera / 60)} minuto(s).",
+                            headers={"Retry-After": str(espera)})
+    u = db.scalar(select(Usuario).where(func.lower(Usuario.email) == email))
     if not u or not verificar_senha(dados.senha, u.senha_hash):
+        limite.registrar_falha(email, ip)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "E-mail ou senha incorretos.")
+    limite.registrar_sucesso(email)
     if not u.ativo:  # só informa depois da senha certa
         raise HTTPException(status.HTTP_403_FORBIDDEN,
                             "Sua conta está inativa ou aguardando aprovação do administrador.")
@@ -53,10 +65,17 @@ def cadastro(dados: CadastroAlunoIn, db: Session = Depends(get_db)):
     Outros perfis só o administrador cria (/usuarios)."""
     exige_plano_ativo(db, dados.plano_id)  # valida antes de criar a conta
     ficha_id = ficha_para_cadastro(db, dados.email, dados.cpf)  # liga à ficha da recepção só se e-mail E CPF baterem
-    u = criar_usuario(db, dados.nome, dados.email, dados.senha, "aluno", ficha_id=ficha_id, cpf=dados.cpf)
-    aluno = aluno_do_usuario(db, u)
-    if aluno and not matricula_vigente(db, aluno["id"]):  # ficha da recepção pode já ter plano ativo
-        criar_matricula(db, aluno["id"], dados.plano_id)
+    # conta, ficha e matrícula na MESMA transação: ou grava tudo, ou nada (sem conta "pela metade")
+    try:
+        u = criar_usuario(db, dados.nome, dados.email, dados.senha, "aluno", ficha_id=ficha_id, cpf=dados.cpf,
+                          commit=False)
+        aluno = aluno_do_usuario(db, u)
+        if not matricula_vigente(db, aluno["id"]):  # ficha da recepção pode já ter plano ativo
+            criar_matricula(db, aluno["id"], dados.plano_id, commit=False)
+        db.commit()
+    except IntegrityError:  # corrida com outro cadastro do mesmo CPF/e-mail
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um cadastro com este e-mail ou CPF.")
     return _token(u)
 
 

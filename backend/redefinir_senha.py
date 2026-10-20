@@ -15,9 +15,9 @@ with SessionLocal() as db:
         raise SystemExit("Esse e-mail não existe no banco.")
 
     print(f"Encontrado: {u.nome} | perfil atual: {u.perfil} | ativo: {u.ativo}")
-    nova = getpass.getpass("Nova senha (mín. 6 caracteres): ")
-    if len(nova) < 6:
-        raise SystemExit("A senha precisa ter pelo menos 6 caracteres.")
+    nova = getpass.getpass("Nova senha (mín. 8 caracteres): ")
+    if len(nova) < 8:
+        raise SystemExit("A senha precisa ter pelo menos 8 caracteres.")
 
     u.senha_hash = hash_senha(nova)
     u.ativo = True

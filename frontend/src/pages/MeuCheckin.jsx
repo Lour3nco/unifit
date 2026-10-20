@@ -52,8 +52,7 @@ export default function MeuCheckin() {
         <button className="btn" type="button" disabled={enviando} onClick={() => registrar(aberto ? "checkout" : "checkin")}>
           {enviando ? "Registrando..." : aberto ? "Fazer check-out" : "Fazer check-in"}
         </button>
-      </section>
-      <div className="err" role="alert">{erro}</div>
+      </section>      <div className="err" role="alert">{erro}</div>
 
       <section className="card">
         <h3>Últimos registros</h3>

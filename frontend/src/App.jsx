@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./auth.jsx";
 import Login from "./pages/Login.jsx";
 import Cadastro from "./pages/Cadastro.jsx";
@@ -27,18 +28,21 @@ function abaSalva() {
 
 export default function App() {
   const { usuario, carregando, semConexao, verificar } = useAuth();
-  const [tela, setTela] = useState("login");
+  const { pathname, state } = useLocation();
+  const navegar = useNavigate();
   const [aba, setAba] = useState(abaSalva); // lembra a última aba usada neste navegador
-  const [pagina, setPagina] = useState("Dashboard");
   const [menuAberto, setMenuAberto] = useState(false);
 
   if (carregando) return null;
   if (semConexao) {
     return (
-      <div className="ph" style={{ margin: 40 }} role="alert">
-        Não foi possível conectar à API. Verifique se o backend está rodando.{" "}
-        <button type="button" className="linkbtn" onClick={verificar}>Tentar de novo</button>
-      </div>
+      <section className="erro-pagina" role="alert">
+        <div className="brand">Uni<b>Fit</b></div>
+        <strong className="codigo">503</strong>
+        <h1>Serviço indisponível</h1>
+        <p>Não conseguimos carregar esta página agora. Aguarde alguns instantes e tente novamente.</p>
+        <button type="button" className="btn" onClick={verificar}>Tentar novamente</button>
+      </section>
     );
   }
   if (!usuario) {
@@ -46,21 +50,33 @@ export default function App() {
       setAba(nova);
       try { localStorage.setItem("gymai_aba", nova); } catch { /* sem armazenamento: só não lembra */ }
     };
-    return tela === "cadastro"
-      ? <Cadastro aba={aba} onAba={mudarAba} onLogin={() => setTela("login")} />
-      : <Login aba={aba} onAba={mudarAba} onCadastro={() => setTela("cadastro")} />;
+    // sem login, endereço de tela interna volta para "/" (guardando a tela em "voltar": quem abriu um
+    // link ou teve a sessão expirada volta para ela depois de entrar)
+    if (pathname !== "/" && pathname !== "/cadastro") return <Navigate to="/" replace state={{ voltar: pathname }} />;
+    return pathname === "/cadastro"
+      ? <Cadastro aba={aba} onAba={mudarAba} onLogin={() => navegar("/")} />
+      : <Login aba={aba} onAba={mudarAba} onCadastro={() => navegar("/cadastro")} />;
   }
 
-  const permitidas = MENU.filter((m) => m.perfis.includes(usuario.perfil)).map((m) => m.nome);
-  const atual = permitidas.includes(pagina) ? pagina : permitidas[0];
+  // endereço sem tela ou de uma tela que o perfil não acessa: vai para a tela guardada antes do login
+  // (se o perfil puder vê-la) ou para a primeira tela do menu
+  const permitidas = MENU.filter((m) => m.perfis.includes(usuario.perfil));
+  const item = permitidas.find((m) => m.rota === pathname);
+  if (!item) {
+    const destino = permitidas.find((m) => m.rota === state?.voltar) || permitidas[0];
+    return <Navigate to={destino.rota} replace />;
+  }
+  const atual = item.nome;
 
   return (
     <div className="app">
-      <Sidebar atual={atual} onSelecionar={(p) => { setPagina(p); setMenuAberto(false); }} aberto={menuAberto} />
+      <Sidebar atual={atual} onSelecionar={(rota) => { navegar(rota); setMenuAberto(false); }} aberto={menuAberto} />
+      {menuAberto && <div className="backdrop" onClick={() => setMenuAberto(false)} aria-hidden="true" />}
       <main>
         <div className="top">
           <div>
-            <button className="menu" onClick={() => setMenuAberto(!menuAberto)}>Menu</button>
+            <button className="menu" onClick={() => setMenuAberto(!menuAberto)}
+              aria-expanded={menuAberto} aria-label="Abrir menu">Menu</button>
             <h2>{atual}</h2>
             <span>{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</span>
           </div>

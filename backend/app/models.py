@@ -16,7 +16,7 @@ PerfilUsuario = ENUM(
 
 
 class Usuario(Base):
-    """Tabela "gymIA".usuarios, igual ao print do banco."""
+    """Tabela "unifit".usuarios, igual ao print do banco."""
     __tablename__ = "usuarios"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)  # bigserial

@@ -34,8 +34,9 @@ def de_hoje(db: Session = Depends(get_db)):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def entrada(dados: AlunoIdIn, db: Session = Depends(get_db)):
-    registrar_entrada(db, exige_aluno(db, dados.aluno_id)["id"])
-    return de_hoje(db)
+    """Exige plano ativo. Com mensalidade em atraso entra, mas volta um "aviso" para a recepção."""
+    aviso = registrar_entrada(db, exige_aluno(db, dados.aluno_id)["id"])
+    return {**de_hoje(db), "aviso": aviso}
 
 
 @router.post("/saida")
