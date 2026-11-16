@@ -9,6 +9,9 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // libera qualquer hostname (necessário para acesso via túnel cloudflared/ngrok, que usam domínios aleatórios).
+    // O app tem login próprio; ainda assim só compartilhe a URL do túnel com quem deve acessar.
+    allowedHosts: true,
     proxy: {
       "/api": {
         target: process.env.API_PROXY_TARGET || "http://localhost:8000",

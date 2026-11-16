@@ -1,21 +1,28 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api, { mensagemErro } from "../api";
 import { useAuth } from "../auth.jsx";
 import Abas from "../components/Abas.jsx";
-import Palco from "../components/Palco.jsx";
-import { cpfMascara, moeda } from "../formato";
+import Logo from "../components/Logo.jsx";
+import { cpfMascara } from "../formato";
 
-const VAZIO = { nome: "", email: "", senha: "", confirmar: "", perfil: "recepcao", plano_id: "", cpf: "" };
+const VAZIO = { nome: "", email: "", senha: "", confirmar: "", perfil: "recepcao", cpf: "" };
 const TEXTOS = {
-  aluno: {
-    titulo: "Crie sua conta",
-    texto: "Acompanhe seus treinos, pagamentos e histórico na academia.",
-  },
-  equipe: {
-    titulo: "Solicitar acesso",
-    texto: "Para recepção e instrutores. Sua conta será liberada depois que um administrador aprovar.",
-  },
+  aluno: { titulo: "Crie sua conta", texto: "Acompanhe seus treinos, pagamentos e histórico na academia." },
+  equipe: { titulo: "Solicitar acesso", texto: "Para recepção e instrutores. Sua conta é liberada depois que um administrador aprovar." },
 };
+
+function Hero() {
+  return (
+    <div className="login-hero">
+      <Logo variant="horizontal" />
+      <div className="tagline">
+        <span className="eyebrow">Gestão de academia</span>
+        <h1>Treine a sua academia para <b>crescer.</b></h1>
+        <p>Alunos, planos, aulas, check-ins e financeiro em um só lugar. Menos planilha, mais resultado.</p>
+      </div>
+    </div>
+  );
+}
 
 export default function Cadastro({ aba, onAba, onLogin }) {
   const { cadastrar } = useAuth();
@@ -23,12 +30,8 @@ export default function Cadastro({ aba, onAba, onLogin }) {
   const [erro, setErro] = useState("");
   const [enviado, setEnviado] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [planos, setPlanos] = useState([]);
-  useEffect(() => {
-    api.get("/auth/planos").then((r) => setPlanos(r.data)).catch(() => setPlanos([]));
-  }, []);
   const mudar = (campo, filtro = (v) => v) => (e) => setF({ ...f, [campo]: filtro(e.target.value) });
-  const t = TEXTOS[aba];
+  const t = TEXTOS[aba] || TEXTOS.equipe;
 
   function trocar(nova) {
     setErro("");
@@ -43,11 +46,10 @@ export default function Cadastro({ aba, onAba, onLogin }) {
     if (f.senha.length < 8) return setErro("A senha precisa ter pelo menos 8 caracteres.");
     if (f.senha !== f.confirmar) return setErro("As senhas não são iguais.");
     if (aba === "aluno" && f.cpf.replace(/\D/g, "").length !== 11) return setErro("Informe o CPF completo.");
-    if (aba === "aluno" && !f.plano_id) return setErro("Escolha um plano.");
     setEnviando(true);
     try {
       if (aba === "aluno") {
-        await cadastrar({ nome: f.nome.trim(), email: f.email.trim(), senha: f.senha, cpf: f.cpf, plano_id: Number(f.plano_id) }); // já entra logado e matriculado
+        await cadastrar({ nome: f.nome.trim(), email: f.email.trim(), senha: f.senha, cpf: f.cpf });
       } else {
         const { data } = await api.post("/auth/cadastro-equipe",
           { nome: f.nome.trim(), email: f.email.trim(), senha: f.senha, perfil: f.perfil });
@@ -64,24 +66,26 @@ export default function Cadastro({ aba, onAba, onLogin }) {
   if (enviado) {
     return (
       <section className="login">
-        <div className="form">
-          <div className="brand">Uni<b>Fit</b></div>
-          <h1>Pedido enviado</h1>
-          <p>{enviado}</p>
+        <Hero />
+        <div className="login-form">
+          <div className="form-logo"><Logo variant="compacta" /></div>
+          <h2>Pedido enviado</h2>
+          <p className="sub">{enviado}</p>
           <button className="btn" type="button" onClick={onLogin}>Voltar para o login</button>
         </div>
-        <Palco />
       </section>
     );
   }
 
   return (
     <section className="login">
-      <form onSubmit={enviar}>
-        <div className="brand">Uni<b>Fit</b></div>
+      <Hero />
+      <form className="login-form" onSubmit={enviar}>
+        <div className="form-logo"><Logo variant="compacta" /></div>
+        <h2>{t.titulo}</h2>
+        <p className="sub">{t.texto}</p>
         <Abas aba={aba} onAba={trocar} />
-        <h1>{t.titulo}</h1>
-        <p>{t.texto}</p>
+
         <label>Nome completo
           <input value={f.nome} onChange={mudar("nome")} autoComplete="name" maxLength={120} required />
         </label>
@@ -91,16 +95,6 @@ export default function Cadastro({ aba, onAba, onLogin }) {
         {aba === "aluno" && (
           <label>CPF
             <input value={f.cpf} onChange={mudar("cpf", cpfMascara)} inputMode="numeric" placeholder="000.000.000-00" required />
-          </label>
-        )}
-        {aba === "aluno" && (
-          <label>Plano
-            <select value={f.plano_id} onChange={mudar("plano_id")} required>
-              <option value="">{planos.length ? "Escolha seu plano..." : "Carregando planos..."}</option>
-              {planos.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome} · {moeda(p.valor)} · {p.duracao_dias} dias</option>
-              ))}
-            </select>
           </label>
         )}
         {aba === "equipe" && (
@@ -117,15 +111,15 @@ export default function Cadastro({ aba, onAba, onLogin }) {
         <label>Confirmar senha
           <input type="password" value={f.confirmar} onChange={mudar("confirmar")} autoComplete="new-password" required />
         </label>
+
         <div className="err" role="alert">{erro}</div>
         <button className="btn" type="submit" disabled={enviando}>
           {enviando ? "Enviando..." : aba === "aluno" ? "Criar conta" : "Solicitar acesso"}
         </button>
-        <span className="hint">
+        <p className="rodape">
           Já tem conta? <button type="button" className="linkbtn" onClick={onLogin}>Entrar</button>
-        </span>
+        </p>
       </form>
-      <Palco />
     </section>
   );
 }

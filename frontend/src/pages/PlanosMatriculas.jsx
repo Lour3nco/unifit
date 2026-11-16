@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api, { mensagemErro } from "../api";
 import { useAuth } from "../auth.jsx";
 import BuscaAluno, { SituacaoAluno } from "../components/BuscaAluno.jsx";
+import PageHeader from "../components/PageHeader.jsx";
 import { data, hojeISO, moeda } from "../formato";
 
 const FILTROS = [["", "Todas"], ["ativa", "Ativas"], ["vencida", "Vencidas"], ["trancada", "Trancadas"],
@@ -19,15 +20,14 @@ export default function PlanosMatriculas() {
 
   return (
     <>
-      <div className="err" role="alert">{erro}</div>
-      <SecaoPlanos planos={planos} podeEditar={usuario.perfil === "administrador"} onMudou={carregarPlanos} />
+      <SecaoPlanos planos={planos} podeEditar={usuario.perfil === "administrador"} onMudou={carregarPlanos} erroCarregar={erro} />
       <NovaMatricula planos={planos.filter((p) => p.ativo)} onMatriculou={() => setVersao((v) => v + 1)} />
       <ListaMatriculas versao={versao} />
     </>
   );
 }
 
-function SecaoPlanos({ planos, podeEditar, onMudou }) {
+function SecaoPlanos({ planos, podeEditar, onMudou, erroCarregar }) {
   const [editando, setEditando] = useState(null); // null, "novo" ou id
   const [f, setF] = useState({});
   const [erro, setErro] = useState("");
@@ -54,40 +54,54 @@ function SecaoPlanos({ planos, podeEditar, onMudou }) {
   }
 
   return (
-    <section className="card">
-      <div className="card-topo">
-        <h3>Planos</h3>
-        {podeEditar && editando === null && <button className="btn-sec" type="button" onClick={() => abrir(null)}>Novo plano</button>}
-      </div>
+    <>
+      <PageHeader eyebrow="Gerenciar planos" title="Planos & Preços">
+        {podeEditar && editando === null && <button className="btn" type="button" onClick={() => abrir(null)}>+ Criar plano</button>}
+      </PageHeader>
+
+      <div className="err" role="alert">{erro || erroCarregar}</div>
+
       {editando !== null && (
-        <form className="form-row" onSubmit={salvar} style={{ marginBottom: 14 }}>
-          <label>Nome<input value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} maxLength={80} required /></label>
-          <label>Valor (R$)<input type="number" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} min="0" step="0.01" required /></label>
-          <label>Duração (dias)<input type="number" value={f.duracao_dias} onChange={(e) => setF({ ...f, duracao_dias: e.target.value })} min="1" max="3650" required /></label>
-          <label className="check"><input type="checkbox" checked={f.ativo} onChange={(e) => setF({ ...f, ativo: e.target.checked })} /> Disponível para venda</label>
-          <div className="acoes">
-            <button className="btn" type="submit">Salvar</button>
-            <button className="btn-sec" type="button" onClick={() => setEditando(null)}>Cancelar</button>
-          </div>
-        </form>
+        <section className="card" style={{ marginBottom: 16 }}>
+          <h3>{editando === "novo" ? "Novo plano" : "Editar plano"}</h3>
+          <form className="form-row" onSubmit={salvar}>
+            <label>Nome<input value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} maxLength={80} required /></label>
+            <label>Valor (R$)<input type="number" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} min="0" step="0.01" required /></label>
+            <label>Duração (dias)<input type="number" value={f.duracao_dias} onChange={(e) => setF({ ...f, duracao_dias: e.target.value })} min="1" max="3650" required /></label>
+            <label className="check"><input type="checkbox" checked={f.ativo} onChange={(e) => setF({ ...f, ativo: e.target.checked })} /> Disponível para venda</label>
+            <div className="acoes">
+              <button className="btn" type="submit">Salvar</button>
+              <button className="btn-sec" type="button" onClick={() => setEditando(null)}>Cancelar</button>
+            </div>
+          </form>
+        </section>
       )}
-      <div className="err" role="alert">{erro}</div>
-      <div className="tablewrap">
-        <table className="t">
-          <thead><tr><th>Plano</th><th>Valor</th><th>Duração</th><th>Situação</th><th></th></tr></thead>
-          <tbody>
-            {planos.map((p) => (
-              <tr key={p.id}>
-                <td>{p.nome}</td><td>{moeda(p.valor)}</td><td>{p.duracao_dias} dias</td>
-                <td><span className={`chip ${p.ativo ? "ativa" : ""}`}>{p.ativo ? "À venda" : "Inativo"}</span></td>
-                <td>{podeEditar && <button className="btn-sec" type="button" onClick={() => abrir(p)}>Editar</button>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      <div className="planos">
+        {planos.map((p, i) => {
+          const destaque = planos.length >= 2 && i === 1;
+          return (
+            <div className={`plano ${destaque ? "destaque" : ""}`} key={p.id}>
+              <div className="plano-topo">
+                <h3>{p.nome}</h3>
+                {destaque && <span className="tag">Popular</span>}
+              </div>
+              <div className="plano-sub">{p.ativo ? "Disponível para venda" : "Fora de venda"}</div>
+              <div className="preco">{moeda(p.valor)}<small>{p.duracao_dias <= 31 ? "/mês" : `/${p.duracao_dias} dias`}</small></div>
+              <ul className="plano-feats">
+                <li>{p.duracao_dias} dias de vigência</li>
+                <li>Renovação automática da mensalidade</li>
+                <li>{p.ativo ? "Disponível no app do aluno" : "Indisponível para novas matrículas"}</li>
+              </ul>
+              <div className="plano-count"><span>Situação</span><strong>{p.ativo ? "Ativo" : "Inativo"}</strong></div>
+              {podeEditar && <button className="btn-sec" type="button" onClick={() => abrir(p)}>Editar plano</button>}
+            </div>
+          );
+        })}
+        {planos.length === 0 && <div className="ph">Nenhum plano cadastrado ainda.</div>}
       </div>
-      {podeEditar && <p className="hint">Mudar o valor vale para as próximas matrículas; cobranças já geradas não mudam.</p>}
-    </section>
+      {podeEditar && <p className="hint" style={{ marginTop: 12 }}>Mudar o valor vale para as próximas matrículas; cobranças já geradas não mudam.</p>}
+    </>
   );
 }
 

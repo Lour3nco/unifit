@@ -94,10 +94,19 @@ export default function Financeiro() {
                             </button>
                           )}
                           <button className="btn-sec perigo" type="button"
-                            onClick={() => window.confirm(`Cancelar a mensalidade de ${p.aluno}?`) && acao(() => api.post(`/pagamentos/${p.id}/cancelar`))}>
+                            onClick={() => window.confirm(`Cancelar a mensalidade de ${p.aluno}? Se for a do período atual, o aluno fica sem acesso pelo app (check-in e aulas) até a cobrança ser reaberta ou uma nova matrícula ser feita.`) && acao(() => api.post(`/pagamentos/${p.id}/cancelar`))}>
                             Cancelar
                           </button>
                         </div>
+                      )}
+                      {(p.status === "pago" || p.status === "cancelado") && (
+                        <button className="btn-sec" type="button"
+                          onClick={() => window.confirm(p.status === "pago"
+                            ? `Reabrir a mensalidade de ${p.aluno}? A baixa (${p.forma_pagamento || "pagamento"}) será desfeita e ela volta a ser cobrada.`
+                            : `Reabrir a mensalidade cancelada de ${p.aluno}? Ela volta a ser cobrada.`)
+                            && acao(() => api.post(`/pagamentos/${p.id}/reabrir`))}>
+                          Reabrir
+                        </button>
                       )}
                       {recebendo === p.id && (
                         <div className="acoes">

@@ -1,0 +1,689 @@
+% =============================================================
+%  Documentação de Sprint — UniFit — Sprint 03
+%  "Estrutura inicial funcionando"
+%  Compilar com pdflatex (2x para o sumário). Funciona no Overleaf.
+%  Evidências: coloque os prints em imagens/sprint03/ com os nomes
+%  indicados em cada \evidencia{...}; enquanto faltarem, aparece uma caixa
+%  cinza no lugar. Este .tex é a parte da Sprint 03: no PDF final, una
+%  as Sprints 01 e 02 antes dele (exigência do Teams).
+% =============================================================
+\documentclass[11pt,a4paper,final]{article}
+
+% ---------- Idioma e codificação ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath}
+
+% ---------- Layout ----------
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% ---------- Tabelas, cores, símbolos ----------
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xltabular}
+\usepackage[table]{xcolor}
+\usepackage{pifont}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,arrows.meta,shapes.geometric,backgrounds}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[font=small]{caption}
+\graphicspath{{imagens/}{imagens/sprint03/}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Paleta ----------
+\definecolor{azul}{HTML}{2B50AA}
+\definecolor{cinza}{HTML}{F2F2F2}
+\definecolor{verde}{HTML}{2E7D32}
+\definecolor{codbg}{HTML}{F6F8FA}
+
+\titleformat{\section}{\Large\bfseries\color{azul}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{azul}}{\thesubsection}{0.6em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small UniFit — Documentação de Sprint}
+\rhead{\small Sprint 03}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---------- Comandos auxiliares ----------
+\newcommand{\ok}{\textcolor{verde}{\ding{51}}}
+\newcommand{\nao}{---}
+\newcommand{\cod}[1]{\texttt{#1}}
+\newcommand{\preencher}[1]{\textit{\textcolor{gray}{#1}}}
+\renewcommand{\arraystretch}{1.25}
+
+% tamanho máximo dos prints: cabem na largura do texto e ocupam no máximo ~1/3 da página
+\newlength{\evidW}\newlength{\evidH}
+\AtBeginDocument{\setlength{\evidW}{0.82\textwidth}\setlength{\evidH}{0.32\textheight}}
+\setlength{\fboxsep}{1pt}
+\captionsetup{font=small,skip=4pt}
+% \evidencia{arquivo}{legenda}{rótulo}: usa o print se existir; senão mostra caixa de aviso
+\newcommand{\evidencia}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{imagens/sprint03/#1}{%
+      \fbox{\includegraphics[width=\evidW,height=\evidH,keepaspectratio]{imagens/sprint03/#1}}%
+    }{\IfFileExists{imagens/#1}{%
+      \fbox{\includegraphics[width=\evidW,height=\evidH,keepaspectratio]{imagens/#1}}%
+    }{%
+      \fcolorbox{gray!60}{cinza}{\parbox[c][2.4cm][c]{0.8\textwidth}{\centering
+        \preencher{Inserir print: \texttt{imagens/sprint03/\detokenize{#1}}}}}%
+    }}
+    \caption{#2}\label{#3}
+  \end{figure}}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codbg},
+  frame=single, rulecolor=\color{gray!40},
+  breaklines=true, columns=fullflexible,
+  keepspaces=true, showstringspaces=false,
+  xleftmargin=4pt, xrightmargin=4pt,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1 {ê}{{\^e}}1 {º}{{\textordmasculine}}1
+}
+
+% =============================================================
+\begin{document}
+
+% ---------- Capa ----------
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries\color{azul} UniFit\par}
+  \vspace{0.6cm}
+  {\LARGE Documentação de Sprint\par}
+  \vspace{0.3cm}
+  {\Large Sprint 03 --- Estrutura inicial funcionando\par}
+  \vspace{1.2cm}
+  {\large Sistema de gestão de academia com previsão de evasão\\
+  e análise de postura por vídeo\par}
+  \vspace{0.8cm}
+  {\small\textbf{Stack:} React + Vite $\cdot$ FastAPI $\cdot$ PostgreSQL (Supabase) $\cdot$ PyTorch\par}
+  \vfill
+  \begin{tabular}{>{\bfseries}l l}
+    \toprule
+    Instituição / Curso & \textbf{UNINASSAU - RECIFE / CIEN. DA COMPUTAÇÃO} \\
+    Disciplina          & \textbf{FABRICA DE SOFTWARE} \\
+    Grupo               & \preencher{Nº do grupo} --- \textbf{UniFit} \\
+    Equipe              & \textbf{Lucas Lourenço, Amhos Cezar, Carlos Guilherme, Vitor Lima} \\
+    Scrum Master        & \preencher{Nome do líder} \\
+    Entrega             & \textbf{Sprint 03 --- data-limite: 19/09} \\
+    Repositório         & \cod{github.com/Lour3nco/unifit} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{1.5cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================
+\section{Identificação e escopo da Sprint}
+
+Esta é a \textbf{terceira Sprint} da disciplina de Fábrica de Software. Seu objetivo é transformar o
+planejamento e a modelagem das etapas anteriores em uma \textbf{estrutura inicial funcional}: aplicação
+organizada, conectada ao banco de dados criado na Sprint 02 e com as funcionalidades essenciais
+operando de verdade, com persistência real.
+
+\subsection{Checklist das entregas obrigatórias}
+
+\begin{xltabular}{\textwidth}{l Y R{4.4cm} c}
+  \toprule
+  \textbf{\#} & \textbf{Entrega} & \textbf{Onde está} & \textbf{Status} \\
+  \midrule
+  \endhead
+  1 & Banco de dados conectado      & Seção~\ref{sec:banco}   & \ok \\
+  2 & Login funcional               & Seção~\ref{sec:login}   & \ok \\
+  3 & Cadastro de usuários          & Seção~\ref{sec:cadastro} & \ok \\
+  4 & Controle de perfis            & Seção~\ref{sec:perfis}  & \ok \\
+  5 & CRUD principal funcionando    & Seção~\ref{sec:crud}    & \ok$^{*}$ \\
+  6 & Primeiro deploy local         & Seção~\ref{sec:local}   & \ok \\
+  \bottomrule
+\end{xltabular}
+
+{\small $^{*}$ A exclusão do CRUD é \textbf{lógica} (cancelamento da matrícula), conforme justificado na
+Seção~\ref{sec:crud}.}
+
+\subsection{Definição de pronto (DoD)}
+
+Um item foi considerado concluído quando: a rota da API responde e está documentada no Swagger
+(\cod{/docs}), a tela correspondente consome a rota, os dados persistem no PostgreSQL, o controle de
+acesso por perfil é respeitado e a regra de negócio foi validada manualmente e por teste automatizado.
+
+% =============================================================
+\section{Estrutura implementada}
+
+Aplicação em \textbf{três camadas}: frontend SPA, API REST e banco relacional, além dos módulos de IA
+acoplados à API (previsão de evasão e análise de postura).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    font=\small,
+    caixa/.style={draw=azul, fill=white, rounded corners=3pt, align=center,
+                  minimum width=3.4cm, minimum height=0.9cm, line width=0.6pt},
+    grupo/.style={draw=azul!60, fill=cinza, rounded corners=6pt, inner sep=10pt},
+    seta/.style={-{Stealth[length=2.5mm]}, line width=0.7pt, color=azul!80!black},
+    banco/.style={cylinder, shape border rotate=90, aspect=0.25, draw=azul,
+                  fill=azul!10, align=center, minimum width=3cm, minimum height=1.5cm, line width=0.6pt}
+]
+  \node[caixa] (ui) {Páginas por perfil\\\footnotesize axios + JWT};
+  \begin{scope}[on background layer]\node[grupo, fit=(ui), label={[font=\footnotesize\bfseries]above:Navegador (SPA React + Vite)}] (cli) {};\end{scope}
+
+  \node[caixa, right=2.4cm of ui] (r) {Routers REST};
+  \node[caixa, above=0.5cm of r]  (sec) {Auth JWT + bcrypt};
+  \node[caixa, below=0.5cm of r]  (s) {Serviços /\\Regras de negócio};
+  \node[caixa, right=0.9cm of sec] (ai1) {IA: Evasão\\\footnotesize PyTorch};
+  \node[caixa, right=0.9cm of s]   (ai2) {IA: Postura\\\footnotesize torchvision + OpenCV};
+  \begin{scope}[on background layer]\node[grupo, fit=(sec)(s)(ai1)(ai2), label={[font=\footnotesize\bfseries]above:Backend FastAPI (porta 8000)}] (api) {};\end{scope}
+
+  \node[banco, below=1.3cm of api] (db) {PostgreSQL / Supabase\\\footnotesize schema \texttt{unifit}};
+
+  \draw[seta] (ui) -- node[above, font=\footnotesize]{HTTPS/JSON} (r);
+  \draw[seta] (r) -- (sec);
+  \draw[seta] (r) -- (s);
+  \draw[seta] (r) -- (ai1);
+  \draw[seta] (r) -- (ai2);
+  \draw[seta] (s)   |- ([xshift=-6mm]db.west) -- (db.west);
+  \draw[seta] (ai1.east) -- ++(0.5,0) |- (db.east);
+  \draw[seta] (ai2) -- (db.north -| ai2);
+\end{tikzpicture}
+\caption{Visão geral da arquitetura do UniFit.}
+\end{figure}
+
+\textbf{Fluxo de uma requisição:} a tela chama a API via \cod{axios} (token JWT no cabeçalho)
+$\rightarrow$ o \textit{router} valida o perfil (\cod{exige\_perfis}) $\rightarrow$ delega a um
+\textit{serviço} com a regra de negócio $\rightarrow$ que lê/escreve no PostgreSQL $\rightarrow$ a
+resposta volta em JSON.
+
+\subsection{Tecnologias}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}l l}
+  \toprule
+  Camada & Tecnologia \\
+  \midrule
+  Frontend             & \textbf{React 18} + \textbf{Vite 5}, \textbf{axios}, \textbf{Recharts} \\
+  Backend              & \textbf{FastAPI} (ASGI, \cod{uvicorn}), \textbf{Pydantic 2} \\
+  Acesso a dados       & \textbf{SQLAlchemy 2.0} + \cod{psycopg2} \\
+  Banco                & \textbf{PostgreSQL} hospedado no \textbf{Supabase} (SSL obrigatório) \\
+  Autenticação         & \textbf{JWT} (\cod{PyJWT}, HS256) + \textbf{bcrypt} \\
+  IA                   & \textbf{PyTorch}, \textbf{torchvision}, \textbf{OpenCV} \\
+  Testes               & \textbf{pytest} \\
+  Execução             & Local (venv + npm) e \textbf{Docker Compose} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Organização do repositório}
+
+\begin{lstlisting}
+unifit/
+|-- backend/
+|   |-- app/
+|   |   |-- main.py          # cria o FastAPI e registra os routers
+|   |   |-- config.py        # le o .env (JWT, CORS)
+|   |   |-- database.py      # conexao SQLAlchemy (Supabase, SSL)
+|   |   |-- models.py        # ORM da tabela usuarios
+|   |   |-- reflexao.py      # demais tabelas lidas por reflexao
+|   |   |-- perfis.py        # enum de perfis + normalizacao
+|   |   |-- security.py      # hash de senha e JWT
+|   |   |-- deps.py          # autenticacao e autorizacao por perfil
+|   |   |-- schemas.py       # modelos Pydantic (entrada/saida)
+|   |   |-- routers/         # modulos de rotas REST
+|   |   |-- services/        # regras de negocio
+|   |   `-- ai/              # churn.py (evasao) e postura.py (visao)
+|   |-- banco/               # schema.sql + migracoes 00N_*.sql
+|   |-- tests/               # testes automatizados (pytest)
+|   |-- criar_admin.py       # cria o primeiro administrador
+|   |-- testar_conexao.py    # valida a conexao com o banco
+|   `-- requirements.txt
+|-- frontend/
+|   `-- src/
+|       |-- pages/           # telas por perfil
+|       |-- components/      # Sidebar, Abas, BuscaAluno, Palco
+|       |-- auth.jsx         # contexto de autenticacao
+|       `-- api.js           # cliente axios + tratamento de erro
+|-- docker-compose.yml
+`-- .env.example
+\end{lstlisting}
+
+\subsection{Padrão de acesso a dados}
+
+Só a tabela \cod{usuarios} é declarada como \textit{model} (\cod{models.py}); as demais são lidas por
+\textbf{reflexão} (\cod{reflexao.py}), trabalhando direto sobre o schema real do banco criado na Sprint 02
+sem duplicar a definição de cada tabela em Python. As regras de negócio ficam em \cod{services/}, separadas
+das rotas.
+
+% =============================================================
+\section{Banco de dados conectado}\label{sec:banco}
+
+O sistema usa o \textbf{PostgreSQL do Supabase}, com todas as tabelas no schema \textbf{\cod{unifit}}.
+A estrutura completa está em \cod{backend/banco/schema.sql}.
+
+\subsection{Como a conexão é feita}
+
+\begin{itemize}
+  \item \cod{app/database.py} monta a URL a partir de variáveis do \cod{.env}
+        (\cod{DB\_HOST}, \cod{DB\_PORT}, \cod{DB\_NAME}, \cod{DB\_USER}, \cod{DB\_PASSWORD},
+        \cod{DB\_SCHEMA}). Se \cod{DB\_HOST} ou \cod{DB\_PASSWORD} faltarem, a aplicação não sobe e
+        informa o motivo.
+  \item Driver \cod{postgresql+psycopg2} com \cod{sslmode=require} (o Supabase exige SSL),
+        \cod{connect\_timeout} de 10\,s e \cod{pool\_pre\_ping} para descartar conexões inativas.
+  \item A senha do banco \textbf{nunca fica no código}: o \cod{.env} é ignorado pelo Git e o repositório
+        traz apenas o \cod{.env.example} (RNF05).
+  \item Cada requisição recebe uma sessão por injeção de dependência (\cod{get\_db}), fechada ao final.
+\end{itemize}
+
+\begin{lstlisting}[language=Python]
+DATABASE_URL = URL.create(
+    drivername="postgresql+psycopg2", username=DB_USER, password=DB_PASSWORD,
+    host=DB_HOST, port=DB_PORT, database=DB_NAME,
+    query={"sslmode": "require"},            # o Supabase exige SSL
+)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True,
+                       connect_args={"connect_timeout": 10})
+\end{lstlisting}
+
+\subsection{Estrutura do banco (resultado da Sprint 02)}
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Tabela} & \textbf{Conteúdo} \\
+  \midrule
+  \endhead
+  \cod{usuarios}          & Contas de acesso (nome, e-mail, hash da senha, perfil, ativo) \\
+  \cod{alunos}            & Ficha do aluno (dados pessoais, nº de matrícula, vínculo com usuário) \\
+  \cod{planos}            & Planos vendidos (valor, duração, ativo) \\
+  \cod{matriculas}        & Vínculo aluno $\times$ plano, com status e período \\
+  \cod{pagamentos}        & Mensalidades (valor, vencimento, status, forma) \\
+  \cod{checkins}          & Entradas e saídas (\cod{data\_hora}, \cod{data\_saida}) \\
+  \cod{exercicios}        & Catálogo de exercícios \\
+  \cod{treinos}, \cod{treino\_itens} & Treinos do aluno e seus itens \\
+  \cod{previsoes\_evasao} & Resultado da IA de evasão por aluno/data \\
+  \cod{sessoes\_postura}  & Histórico das análises de vídeo \\
+  \bottomrule
+\end{xltabular}
+
+\textbf{Tipos enumerados:} \cod{perfil\_usuario}, \cod{status\_matricula} e \cod{status\_pagamento}.
+As alterações incrementais estão em \cod{banco/00N\_*.sql} (migrações \textbf{idempotentes}).
+
+\subsection{Como demonstrar que a conexão funciona}
+
+\begin{enumerate}
+  \item \textbf{Script de diagnóstico} --- imprime o host, a versão do Postgres, as tabelas do schema
+        \cod{unifit} com suas colunas e os valores do enum de perfis:
+\begin{lstlisting}[language=bash]
+cd backend
+python testar_conexao.py
+\end{lstlisting}
+  \item \textbf{Health check da API} --- \cod{GET /saude} executa uma consulta no banco e informa se ele
+        respondeu:
+\begin{lstlisting}[language=bash]
+curl http://localhost:8000/saude
+\end{lstlisting}
+  \item \textbf{Supabase} --- as linhas criadas pela aplicação aparecem no \textit{Table Editor} do projeto.
+\end{enumerate}
+
+\evidencia{banco_testar_conexao.png}{Saída de \cod{python testar\_conexao.py}: host (Supabase), versão do PostgreSQL (17.6) e as 17 tabelas do schema \cod{unifit} com suas colunas.}{fig:bd-script}
+\evidencia{banco_supabase.png}{Tabelas do schema \cod{unifit} no Supabase.}{fig:bd-supabase}
+\evidencia{banco_saude.png}{Resposta do \cod{GET /saude} (banco acessível).}{fig:bd-saude}
+
+% =============================================================
+\section{Login funcional}\label{sec:login}
+
+O login está integrado ao banco: \cod{POST /auth/login} consulta a tabela \cod{usuarios} e confere a senha
+com \textbf{bcrypt}.
+
+\subsection{Fluxo}
+
+\begin{enumerate}
+  \item A tela envia e-mail, senha e a aba escolhida (\textbf{Aluno} ou \textbf{Equipe}).
+  \item A API busca o usuário pelo e-mail (sem diferenciar maiúsculas) e verifica o hash da senha.
+  \item Se estiver correto e a conta ativa, devolve um \cod{access\_token} \textbf{JWT} (HS256, expira em
+        60 min) e os dados do usuário (id, nome, e-mail, perfil).
+  \item O frontend guarda o token e o envia em \cod{Authorization: Bearer <token>} a cada requisição
+        (interceptor do \cod{axios}, em \cod{api.js}).
+  \item Cada rota protegida resolve o usuário atual (\cod{deps.usuario\_atual}), relê o usuário no banco
+        e confere o perfil.
+\end{enumerate}
+
+\subsection{Respostas e proteções}
+
+\begin{xltabular}{\textwidth}{l l Y}
+  \toprule
+  \textbf{Situação} & \textbf{HTTP} & \textbf{Comportamento} \\
+  \midrule
+  \endhead
+  Credenciais corretas             & 200 & Devolve token e dados do usuário \\
+  E-mail ou senha incorretos       & 401 & Mesma mensagem nos dois casos (não revela se o e-mail existe) \\
+  Conta inativa / aguardando       & 403 & Só avisa \textit{depois} da senha certa \\
+  Aba errada (aluno $\leftrightarrow$ equipe) & 403 & Orienta a usar a aba correta \\
+  Muitas tentativas erradas        & 429 & Bloqueio temporário por e-mail e por IP, com \cod{Retry-After} \\
+  Token ausente, inválido ou expirado & 401 & ``Faça login'' / ``Sessão expirada'' \\
+  \bottomrule
+\end{xltabular}
+
+O limite de tentativas é configurável no \cod{.env} (padrão: 5 erros por e-mail e 20 por IP em 15 minutos).
+O usuário é sempre relido no banco: uma conta desativada perde o acesso na hora, e o perfil vale o do
+banco, não o do token.
+
+\subsection{Evidências}
+
+\evidencia{login_tela.png}{Tela de login com as abas Aluno e Equipe.}{fig:login-tela}
+\evidencia{login_swagger.png}{\cod{POST /auth/login} no Swagger devolvendo o token JWT.}{fig:login-swagger}
+\evidencia{login_erro.png}{Mensagem de erro para credenciais inválidas.}{fig:login-erro}
+
+% =============================================================
+\section{Cadastro de usuários}\label{sec:cadastro}
+
+Há \textbf{três caminhos} de criação de usuários, todos persistidos em \cod{usuarios} (e \cod{alunos},
+quando for aluno).
+
+\begin{xltabular}{\textwidth}{l l Y}
+  \toprule
+  \textbf{Caminho} & \textbf{Rota} & \textbf{Regra} \\
+  \midrule
+  \endhead
+  Aluno (público)      & \cod{POST /auth/cadastro}        & Cria o perfil \textbf{aluno}, já ligado a uma ficha e matriculado no plano escolhido \\
+  Equipe (público)     & \cod{POST /auth/cadastro-equipe} & Perfil recepção ou instrutor; a conta nasce \textbf{inativa} até o administrador aprovar \\
+  Administrador        & \cod{POST /usuarios}             & Cria qualquer perfil e aprova/inativa contas (\cod{PATCH /usuarios/\{id\}}) \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Campos e validações}
+
+\begin{itemize}
+  \item \textbf{Nome} (2 a 120 caracteres), \textbf{e-mail} válido e \textbf{senha} de 8 a 72 caracteres,
+        validados pelo Pydantic.
+  \item \textbf{CPF} obrigatório no cadastro do aluno: é ele que permite ligar a conta à ficha criada
+        antes pela recepção, \textbf{somente se e-mail e CPF baterem}.
+  \item \textbf{Plano} escolhido (validado antes de criar a conta).
+  \item A senha é gravada apenas como \textbf{hash bcrypt}.
+\end{itemize}
+
+\subsection{Regras de negócio}
+
+\begin{itemize}
+  \item O cadastro público \textbf{nunca cria administrador}.
+  \item Conta, ficha e matrícula são gravadas na \textbf{mesma transação}: ou grava tudo, ou nada (sem
+        conta ``pela metade'').
+  \item E-mail ou CPF repetido devolve \cod{409 --- Já existe um cadastro}, inclusive em cadastros
+        simultâneos (a restrição única do banco é tratada).
+  \item O administrador não pode rebaixar nem desativar a si mesmo.
+\end{itemize}
+
+\subsection{Evidências}
+
+\evidencia{cadastro_aluno.png}{Tela de cadastro de aluno.}{fig:cad-aluno}
+\evidencia{cadastro_equipe.png}{Formulário de pedido de acesso da equipe (a conta só é liberada após aprovação do administrador).}{fig:cad-equipe}
+\evidencia{cadastro_banco.png}{Usuário criado, visível na tabela \cod{usuarios} do Supabase (senha apenas como hash).}{fig:cad-banco}
+
+% =============================================================
+\section{Controle de perfis}\label{sec:perfis}
+
+O sistema tem quatro perfis, definidos pelo enum \cod{perfil\_usuario} do banco e normalizados em
+\cod{perfis.py}: \textbf{administrador}, \textbf{recepção}, \textbf{instrutor} e \textbf{aluno}.
+
+\subsection{Como é aplicado}
+
+\begin{itemize}
+  \item \textbf{Servidor:} a dependência \cod{exige\_perfis(...)} protege cada rota e devolve
+        \cod{403} quando o perfil não tem acesso (RF02).
+  \item \textbf{Cliente:} o \cod{Sidebar.jsx} define o \cod{MENU} e filtra os itens pelo perfil, repetindo
+        no frontend o controle que a API garante.
+  \item \textbf{Isolamento de dados (RN04):} o aluno só enxerga os \textbf{próprios} dados; tudo na área
+        do aluno parte do usuário logado.
+\end{itemize}
+
+\begin{lstlisting}[language=Python]
+def exige_perfis(*perfis: str):  # RF02
+    def checar(usuario: Usuario = Depends(usuario_atual)) -> Usuario:
+        if normalizar_perfil(usuario.perfil) not in perfis:
+            raise HTTPException(403, "Seu perfil não tem acesso a esta função.")
+        return usuario
+    return checar
+\end{lstlisting}
+
+\subsection{Matriz de permissões}
+
+\begin{xltabular}{\textwidth}{X c c c c}
+  \toprule
+  \textbf{Funcionalidade} & \textbf{Aluno} & \textbf{Recepção} & \textbf{Instrutor} & \textbf{Admin} \\
+  \midrule
+  \endhead
+  Meus dados / treinos / check-in / pagamentos & \ok  & \nao & \nao & \nao \\
+  Dashboard                    & \nao & \ok  & \ok  & \ok \\
+  Alunos (cadastro/edição)     & \nao & \ok  & \nao$^{*}$ & \ok \\
+  Planos e matrículas          & \nao & \ok  & \nao & \ok \\
+  Financeiro                   & \nao & \ok  & \nao & \ok \\
+  Check-in (recepção)          & \nao & \ok  & \nao & \ok \\
+  Treinos (montar)             & \nao & \nao & \ok  & \ok \\
+  Análise de postura           & \nao & \nao & \ok  & \ok \\
+  Relatórios                   & \nao & \nao & \nao & \ok \\
+  Usuários (equipe)            & \nao & \nao & \nao & \ok \\
+  \bottomrule
+\end{xltabular}
+
+{\small $^{*}$ O instrutor apenas \textbf{consulta} a lista de alunos; cadastrar e editar é da recepção e do
+administrador.}
+
+\evidencia{perfis_menu_admin.png}{Menu do perfil Administrador.}{fig:perfil-admin}
+\evidencia{perfis_menu_aluno.png}{Menu do perfil Aluno (apenas as telas permitidas).}{fig:perfil-aluno}
+\evidencia{perfis_403.png}{Resposta \cod{403} ao acessar uma rota sem permissão.}{fig:perfil-403}
+
+% =============================================================
+\section{CRUD principal: Alunos}\label{sec:crud}
+
+A entidade principal do sistema é o \textbf{aluno}. O CRUD está implementado em
+\cod{routers/gestao\_alunos.py}, com persistência real no PostgreSQL e integração com a tela
+\textbf{Alunos} (\cod{Alunos.jsx}).
+
+\begin{xltabular}{\textwidth}{l l l Y}
+  \toprule
+  \textbf{Operação} & \textbf{Rota} & \textbf{Acesso} & \textbf{Descrição} \\
+  \midrule
+  \endhead
+  Cadastrar & \cod{POST /alunos}        & recepção, admin & Cria o aluno já matriculado; o nº de matrícula é gerado pelo banco \\
+  Consultar & \cod{GET /alunos?busca=}  & equipe          & Lista (até 200) com busca por nome, e-mail, CPF ou nº de matrícula \\
+  Atualizar & \cod{PUT /alunos/\{id\}}  & recepção, admin & Altera os dados cadastrais do aluno \\
+  Excluir   & \cod{PATCH /matriculas/\{id\}} & recepção, admin & Cancela a matrícula (\cod{status = cancelada}) \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Detalhes de cada operação}
+
+\begin{itemize}
+  \item \textbf{Cadastrar:} valida o plano \textit{antes} de gravar; aluno e matrícula são criados na
+        \textbf{mesma transação} (se a matrícula falhar, o aluno também não é gravado). O número de
+        matrícula segue o formato ano + sequência de 6 dígitos (ex.: \cod{2026000001}).
+  \item \textbf{Consultar:} a listagem traz, para cada aluno, o plano atual, a situação da matrícula, o
+        último check-in, as mensalidades em atraso e se está na academia agora.
+  \item \textbf{Atualizar:} CPF, telefone, data de nascimento, sexo, altura e peso com validação
+        (altura 50--260\,cm, peso 20--400\,kg, nascimento entre 1900 e hoje).
+  \item \textbf{Excluir:} a exclusão é \textbf{lógica}. Apagar fisicamente o aluno removeria o histórico
+        financeiro e de frequência (pagamentos, check-ins e treinos referenciam a ficha), então o
+        sistema \textbf{cancela a matrícula} e preserva os dados.
+\end{itemize}
+
+\subsection{Outras entidades com CRUD}
+
+Planos (\cod{/planos}), matrículas (\cod{/matriculas}), exercícios (\cod{/exercicios}), treinos
+(\cod{/treinos}) e usuários (\cod{/usuarios}) também têm cadastro, consulta e alteração, usando
+\cod{PATCH} para ativar/inativar. A \textbf{exclusão física} existe para sessões de treino
+(\cod{DELETE /sessoes/\{id\}}) e para chaves de API (\cod{DELETE /chaves/\{id\}}).
+
+\subsection{Evidências}
+
+\evidencia{crud_listar.png}{Listagem de alunos com busca.}{fig:crud-listar}
+\evidencia{crud_cadastrar.png}{Formulário de cadastro de novo aluno.}{fig:crud-cad}
+\evidencia{crud_editar.png}{Edição dos dados de um aluno.}{fig:crud-edit}
+\evidencia{crud_excluir.png}{Cancelamento da matrícula (exclusão lógica).}{fig:crud-excl}
+\evidencia{crud_banco.png}{Registro do aluno na tabela \cod{alunos} do Supabase, confirmando a persistência.}{fig:crud-bd}
+
+% =============================================================
+\section{Testes automatizados}
+
+O backend tem uma suíte \textbf{pytest} (\cod{backend/tests/}) com \textbf{53 testes} que rodam sobre um
+\textbf{schema temporário} (\cod{unifit\_teste\_xxxx}) criado a partir de \cod{banco/schema.sql} e apagado ao
+final, sem tocar o schema \cod{unifit}.
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l r l}
+  \toprule
+  \normalfont\bfseries Arquivo & \textbf{Testes} & \textbf{Cobertura} \\
+  \midrule
+  test\_auth.py        & 10 & Login, token, bloqueio por tentativas, cadastro transacional \\
+  test\_permissoes.py  & 26 & Acesso por perfil, conta desativada, isolamento entre alunos \\
+  test\_regras.py      & 17 & Matrículas, pagamentos, check-in e renovação automática \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}[language=bash]
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest
+\end{lstlisting}
+
+\evidencia{testes_pytest.png}{Execução da suíte de testes (\cod{python -m pytest}).}{fig:pytest}
+
+% =============================================================
+\section{Execução em ambiente local}\label{sec:local}
+
+Pré-requisitos: \textbf{Python 3.11+}, \textbf{Node 18+} e acesso a um PostgreSQL (Supabase) com o
+\cod{schema.sql} aplicado.
+
+\begin{enumerate}
+  \item \textbf{Clonar o repositório:}
+\begin{lstlisting}[language=bash]
+git clone https://github.com/Lour3nco/unifit.git
+cd unifit
+\end{lstlisting}
+  \item \textbf{Configurar segredos:} copiar \cod{.env.example} para \cod{.env} e preencher
+        \cod{DB\_HOST}, \cod{DB\_PASSWORD} e \cod{JWT\_SECRET}. Se o Supabase acusar
+        \textit{Network is unreachable} (IPv6), usar o \textit{Session pooler}.
+  \item \textbf{Backend:}
+\begin{lstlisting}[language=bash]
+cd backend
+python -m venv .venv && .venv\Scripts\activate   # (Windows)
+pip install -r requirements.txt
+python criar_admin.py                            # cria o 1o administrador
+python -m uvicorn app.main:app --reload --port 8000
+\end{lstlisting}
+  \item \textbf{Frontend:}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm install
+npm run dev
+\end{lstlisting}
+  \item \textbf{Acessar:} aplicação em \textbf{\url{http://localhost:5173}} e documentação da API em
+        \textbf{\url{http://localhost:8000/docs}}.
+\end{enumerate}
+
+\textbf{Alternativa com Docker:}
+\begin{lstlisting}[language=bash]
+docker compose up --build
+\end{lstlisting}
+O site e a API ficam em \url{http://localhost:8080} (a API em \cod{/api}, servida pelo nginx junto com o
+frontend compilado).
+
+\evidencia{local_backend.png}{Backend em execução (\cod{uvicorn}) na porta 8000.}{fig:local-back}
+\evidencia{local_swagger.png}{Documentação interativa da API em \cod{/docs}.}{fig:local-swagger}
+\evidencia{local_frontend.png}{Frontend em execução em \cod{localhost:5173}.}{fig:local-front}
+
+% =============================================================
+\section{Repositório GitHub}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}l l}
+  \toprule
+  Repositório & \url{https://github.com/Lour3nco/unifit} \\
+  Branch principal & \cod{main} \\
+  Versão entregue  & \cod{UniFit V1.0.0} \\
+  Documentação     & \cod{README.md} (execução, Docker, testes, perfis e banco) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\evidencia{github_commits.png}{Histórico de commits do repositório no GitHub.}{fig:github}
+
+% =============================================================
+\section{Ajustes em relação às Sprints anteriores}
+
+Alterações feitas na modelagem do banco durante a implementação, registradas nas migrações
+\cod{banco/00N\_*.sql}:
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Migração} & \textbf{Ajuste e justificativa} \\
+  \midrule
+  \endhead
+  \cod{001} & Coluna \cod{data\_saida} (check-out), perfil \cod{recepcao} no enum e número de matrícula automático (ano + sequência). Necessários para a operação da recepção. \\
+  \cod{002} & \cod{data\_saida} padronizada como \cod{timestamptz}, evitando erro de fuso horário. \\
+  \cod{003} & Registro das sessões de treino realizadas pelo aluno. \\
+  \cod{004} & Tabela de chaves de API para acesso programático. \\
+  \cod{005} & Campo de pagamento informado pelo aluno, para confirmação da recepção. \\
+  \cod{006} & Índices (matrícula e postura) para desempenho. \\
+  \cod{007} & Schema renomeado para \cod{unifit}. \\
+  \bottomrule
+\end{xltabular}
+
+\preencher{Registre aqui qualquer ajuste de requisitos, diagramas ou cronograma das Sprints 01 e 02 que a
+equipe tenha feito, com a justificativa.}
+
+% =============================================================
+\section{Dificuldades encontradas e próximos passos}
+
+\subsection{Dificuldades}
+
+\begin{itemize}
+  \item \textbf{Conexão com o Supabase:} o host direto usa IPv6 e pode dar \textit{Network is
+        unreachable}; a solução foi usar o \textit{Session pooler} e exigir SSL.
+  \item \textbf{Fuso horário:} colunas \cod{timestamptz} geravam horários errados em check-in/check-out;
+        padronizado para \cod{America/Sao\_Paulo} (migração \cod{002}).
+  \item \textbf{Perfis no banco:} o enum \cod{perfil\_usuario} tinha valores diferentes dos nomes usados
+        na API; criada a normalização em \cod{perfis.py}.
+  \item \textbf{Consistência de dados:} cadastro de conta, ficha e matrícula precisou ser transacional
+        para não deixar contas ``pela metade''.
+  \item \textbf{Exclusão de alunos:} apagar fisicamente quebraria o histórico financeiro; adotada
+        exclusão lógica por cancelamento de matrícula.
+  \item \preencher{Acrescente aqui as dificuldades reais da equipe (organização, prazos, ferramentas).}
+\end{itemize}
+
+\subsection{Limitações atuais}
+
+\begin{itemize}
+  \item A IA de evasão é treinada com \textbf{dados sintéticos} (prova de conceito).
+  \item A análise de postura é \textbf{heurística} (apoio ao instrutor, não diagnóstico).
+\end{itemize}
+
+\subsection{Próximos passos}
+
+\begin{enumerate}
+  \item Treinar a IA de evasão com \textbf{dados reais} da base.
+  \item Melhorias de UX no dashboard e exportação de relatórios (PDF/CSV).
+  \item Testes de componente no frontend e integração contínua (CI).
+  \item Observabilidade: logs estruturados e monitoramento das análises de postura.
+\end{enumerate}
+
+\vfill
+\begin{center}\small\itshape
+ UniFit --- Sprint 03.
+\end{center}
+
+\end{document}

@@ -1,8 +1,8 @@
 import re
-from datetime import date
+from datetime import date, time
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 PerfilNome = Literal["administrador", "recepcao", "instrutor", "aluno"]
 
@@ -13,6 +13,28 @@ class LoginIn(BaseModel):
     acesso: Literal["aluno", "equipe"] | None = None  # aba da tela de login; None aceita qualquer perfil
 
 
+class EsqueciSenhaIn(BaseModel):
+    """Informe o e-mail OU o telefone cadastrado (o telefone é o da ficha de aluno)."""
+    email: EmailStr | None = None
+    telefone: str | None = Field(None, max_length=20)
+
+    @field_validator("telefone", mode="before")
+    @classmethod
+    def _telefone(cls, v):
+        return (str(v).strip() or None) if v is not None else None
+
+    @model_validator(mode="after")
+    def _um_dos_dois(self):
+        if (self.email is None) == (self.telefone is None):
+            raise ValueError("Informe o e-mail ou o telefone.")
+        return self
+
+
+class RedefinirSenhaIn(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    senha: str = Field(min_length=8, max_length=72)
+
+
 class CadastroIn(BaseModel):
     nome: str = Field(min_length=2, max_length=120)
     email: EmailStr
@@ -20,7 +42,7 @@ class CadastroIn(BaseModel):
 
 
 class CadastroAlunoIn(CadastroIn):
-    plano_id: int  # todo aluno já entra matriculado em um plano
+    plano_id: int | None = None  # opcional: se não vier, o aluno escolhe o plano no 1º login
     cpf: str  # obrigatório: é o que permite ligar a conta à ficha da recepção com segurança
 
     @field_validator("cpf", mode="before")
@@ -222,6 +244,40 @@ class SessaoIn(BaseModel):
     data: date | None = None  # dia da execução; vazio = agora
     observacao: str | None = Field(None, max_length=500)
     itens: list[SessaoItemIn] = Field(min_length=1, max_length=30)
+
+    @field_validator("data")
+    @classmethod
+    def _data(cls, v):
+        if v is not None and v > date.today():
+            raise ValueError("O treino não pode ser registrado numa data futura.")
+        return v
+
+
+class AulaIn(BaseModel):
+    """Definição de uma aula recorrente (grade semanal). dia_semana: 0=Seg ... 6=Dom."""
+    nome: str = Field(min_length=2, max_length=80)
+    instrutor_id: int | None = None
+    dia_semana: int = Field(ge=0, le=6)
+    hora_inicio: time
+    hora_fim: time
+    capacidade: int = Field(ge=1, le=200)
+
+    @field_validator("hora_fim")
+    @classmethod
+    def _fim(cls, v, info):
+        ini = info.data.get("hora_inicio")
+        if ini is not None and v <= ini:
+            raise ValueError("A hora de término deve ser depois da hora de início.")
+        return v
+
+
+class ReservaIn(BaseModel):
+    data: date
+    aluno_id: int | None = None  # a equipe pode reservar para um aluno; o aluno reserva para si
+
+
+class PresencaIn(BaseModel):
+    presente: bool
 
 
 class ApiKeyCriarIn(BaseModel):

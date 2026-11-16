@@ -102,6 +102,39 @@ def test_recusar_informe_volta_a_ser_cobranca_normal(cliente, db, aluno, recepca
     assert cliente.post(f"/pagamentos/{pid}/recusar-informe", headers=recepcao).status_code == 409
 
 
+def test_reabrir_pagamento_pago_desfaz_a_baixa(cliente, db, aluno, recepcao):
+    pid = _pagamentos(db, aluno["id"])[0].id
+    cliente.post(f"/meu/pagamentos/{pid}/informar", json={"forma": "pix"}, headers=aluno["auth"])
+    cliente.post(f"/pagamentos/{pid}/baixa", json={"forma": "pix"}, headers=recepcao)
+    r = cliente.post(f"/pagamentos/{pid}/reabrir", headers=recepcao)
+    assert r.status_code == 200, r.text
+    db.expire_all()
+    p = _pagamentos(db, aluno["id"])[0]
+    assert str(p.status) == "pendente"  # vence hoje: ainda não está atrasada
+    assert p.data_pagamento is None and p.forma_pagamento is None and p.informado_em is None
+    assert cliente.post(f"/pagamentos/{pid}/reabrir", headers=recepcao).status_code == 409  # já está em aberto
+
+
+def test_reabrir_cancelada_vencida_volta_atrasada_e_bloqueia_o_checkin(cliente, db, aluno, conta):
+    _, admin = conta("administrador")
+    pid = _pagamentos(db, aluno["id"])[0].id
+    assert cliente.post(f"/pagamentos/{pid}/cancelar", headers=admin).status_code == 200
+    mudar_vencimento(db, aluno["id"], 5)
+    assert cliente.post("/meu/checkin", headers=aluno["auth"]).status_code == 403  # cancelada não libera de graça
+    assert cliente.post(f"/pagamentos/{pid}/reabrir", headers=admin).status_code == 200
+    db.expire_all()
+    assert str(_pagamentos(db, aluno["id"])[0].status) == "atrasado"
+    assert cliente.post("/meu/checkin", headers=aluno["auth"]).status_code == 403  # voltou a cobrar
+
+
+def test_so_recepcao_e_admin_reabrem_pagamento(cliente, db, aluno, conta, recepcao):
+    pid = _pagamentos(db, aluno["id"])[0].id
+    cliente.post(f"/pagamentos/{pid}/baixa", json={"forma": "dinheiro"}, headers=recepcao)
+    assert cliente.post(f"/pagamentos/{pid}/reabrir", headers=conta("instrutor")[1]).status_code == 403
+    assert cliente.post(f"/pagamentos/{pid}/reabrir", headers=aluno["auth"]).status_code == 403
+    assert cliente.post(f"/pagamentos/{pid + 999}/reabrir", headers=recepcao).status_code == 404
+
+
 def test_aluno_nao_consegue_mais_dar_baixa_sozinho(cliente, db, aluno):
     pid = _pagamentos(db, aluno["id"])[0].id
     assert cliente.post(f"/meu/pagamentos/{pid}/pagar", json={"forma": "pix"}, headers=aluno["auth"]).status_code == 404

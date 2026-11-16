@@ -1,0 +1,740 @@
+% =============================================================
+%  Documentação de Sprint — UniFit — Versão 1.0.1
+%  Compilar com pdflatex (2x para o sumário). Funciona no Overleaf.
+% =============================================================
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Idioma e codificação ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage[final]{graphicx}
+\graphicspath{{imagens/}{imagens/ui/}{imagens/logos/}}
+
+% ---------- Layout ----------
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% ---------- Tabelas, cores, símbolos ----------
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xltabular}
+\usepackage[table]{xcolor}
+\usepackage{pifont}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,arrows.meta,shapes.geometric,backgrounds}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Paleta (cores da UI v1.0.1) ----------
+\definecolor{volt}{HTML}{CBF50F}      % destaque da UI (--acc)
+\definecolor{voltescuro}{HTML}{6E8A00} % volt escurecido, legível sobre papel branco
+\definecolor{grafite}{HTML}{0E0E0E}   % fundo da UI (--bg)
+\definecolor{painel}{HTML}{161616}    % painéis da UI (--panel)
+\definecolor{cinza}{HTML}{F2F2F2}
+\definecolor{sucesso}{HTML}{43C66B}   % --ok
+\definecolor{atencao}{HTML}{E0A32E}   % --warn
+\definecolor{risco}{HTML}{F0493C}     % --risk
+\definecolor{codbg}{HTML}{F6F8FA}
+
+% títulos: texto grafite com barra volt (seção) e marcador volt (subseção)
+\titleformat{\section}{\Large\bfseries\color{grafite}}{\colorbox{volt}{\strut\ \thesection\ }}{0.7em}{}[\vspace{-0.3em}{\color{volt}\titlerule[2pt]}]
+\titleformat{\subsection}{\large\bfseries\color{painel}}{\textcolor{voltescuro}{\rule[0.05em]{0.5em}{0.5em}}\ \thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{voltescuro}}{\thesubsubsection}{0.6em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small UniFit — Documentação de Sprint}
+\rhead{\small Versão 1.0.1}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{1.2pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{volt}\leaders\hrule height \headrulewidth\hfill}}
+
+% ---------- Comandos auxiliares ----------
+\newcommand{\ok}{\textcolor{sucesso}{\ding{51}}}
+\newcommand{\nao}{---}
+\newcommand{\cod}[1]{\texttt{#1}}
+\newcommand{\preencher}[1]{\textit{\textcolor{gray}{#1}}}
+\renewcommand{\arraystretch}{1.25}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codbg},
+  frame=single, rulecolor=\color{gray!40},
+  breaklines=true, columns=fullflexible,
+  keepspaces=true, showstringspaces=false,
+  xleftmargin=4pt, xrightmargin=4pt,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1 {ê}{{\^e}}1 {º}{{\textordmasculine}}1
+}
+
+% =============================================================
+\begin{document}
+
+% ---------- Capa ----------
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  \includegraphics[width=2.4cm]{imagens/logos/android-chrome-512x512.png}\par
+  \vspace{0.4cm}
+  {\fontsize{40}{46}\selectfont\bfseries\color{grafite} Uni\colorbox{volt}{\strut Fit}\par}
+  \vspace{0.6cm}
+  {\LARGE Documentação de Sprint\par}
+  \vspace{0.3cm}
+  {\Large Versão 1.0.1\par}
+  \vspace{1.2cm}
+  {\large Sistema de gestão de academia com previsão de evasão\\
+  e análise de postura por vídeo\par}
+  \vspace{0.8cm}
+  {\small\textbf{Stack:} React + Vite $\cdot$ FastAPI $\cdot$ PostgreSQL (Supabase) $\cdot$ PyTorch\par}
+  \vfill
+  \begin{tabular}{>{\bfseries}l l}
+    \toprule
+    Instituição / Curso & \textbf{UNINASSAU - RECIFE / CIEN. DA COMPUTAÇÃO} \\
+    Disciplina          & \textbf{FABRICA DE SOFTWARE} \\
+    Equipe              & \textbf{Lucas Lourenço, Amhos Cezar, Carlos Guilherme, Vitor Lima} \\
+    Entrega             & \textbf{Versão 1.0.1} \\
+    Repositório         & \cod{Lour3nco/unifit} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{1.5cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================
+\section{Visão geral da versão}
+
+A versão \textbf{1.0.1} evolui o \textbf{UniFit v1.0.0} (sistema web de gestão de academias com
+\textbf{previsão de evasão} e \textbf{análise de postura por vídeo}) sem alterar sua arquitetura.
+O sistema continua multiperfil: \textbf{Aluno}, \textbf{Recepção}, \textbf{Instrutor} e
+\textbf{Administrador}.
+
+As mudanças desta versão se concentram em quatro frentes:
+
+\begin{enumerate}
+  \item \textbf{Aulas \& Agenda} --- novo módulo com grade semanal recorrente, reserva de vagas,
+        check-in em aula e indicadores de presença.
+  \item \textbf{Novo fluxo de cadastro} --- o plano deixa de ser escolhido no cadastro; o aluno o
+        escolhe no primeiro login e só acessa o sistema com plano ativo.
+  \item \textbf{Nova identidade visual} --- logotipo oficial, ícones do navegador, tema escuro com
+        cor de destaque, nova barra lateral e cabeçalho padronizado.
+  \item \textbf{Análise de postura mais confiável} --- filtro de mediana, detecção de rastreamento
+        instável e novos alertas de execução.
+\end{enumerate}
+
+\subsection{Objetivo da sprint}
+
+Entregar a \textbf{versão 1.0.1}, contemplando:
+
+\begin{itemize}
+  \item Módulo de aulas com reservas e presença para todos os perfis.
+  \item Cadastro de aluno sem plano e tela de escolha de plano no primeiro acesso.
+  \item Refatoração visual do frontend (login, cadastro, dashboard, alunos, planos, menu).
+  \item Melhoria da precisão da análise de postura.
+\end{itemize}
+
+\subsection{Definição de pronto (DoD)}
+
+Um item foi considerado concluído quando: a rota da API responde e está documentada no
+Swagger (\cod{/docs}), a tela correspondente consome a rota, o controle de acesso por perfil é
+respeitado e a regra de negócio foi validada manualmente.
+
+\subsection{Resumo quantitativo}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}l r}
+  \toprule
+  Indicador & Valor \\
+  \midrule
+  Arquivos existentes modificados            & 16 \\
+  Arquivos / pastas novos                    & 8 \\
+  Linhas adicionadas / removidas (rastreados) & 993 / 339 \\
+  Novas tabelas no banco                     & 2 \\
+  Novas rotas da API                         & 15 \\
+  Novas telas no frontend                    & 2 \\
+  Novos componentes reutilizáveis            & 2 \\
+  Novas migrações                            & 1 (\cod{008}) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+% =============================================================
+\section{Backlog da sprint (histórias de usuário $\times$ requisitos)}
+
+\begin{xltabular}{\textwidth}{l R{2.4cm} Y R{2.6cm} c}
+  \toprule
+  \textbf{\#} & \textbf{Como\ldots} & \textbf{Quero\ldots} & \textbf{Requisito} & \textbf{Entregue} \\
+  \midrule
+  \endhead
+  H15 & admin/recepção/instrutor & montar a grade semanal de aulas com instrutor e capacidade & RF13 & \ok \\
+  H16 & aluno          & ver a grade da semana e reservar vaga em uma aula       & RF13       & \ok \\
+  H17 & aluno          & cancelar minha reserva e fazer check-in na aula         & RF13, RF05 & \ok \\
+  H18 & equipe         & reservar para um aluno e registrar a presença na aula   & RF13       & \ok \\
+  H19 & gestor         & ver a performance das aulas (presença por aula e instrutor) & RF09, RF13 & \ok \\
+  H20 & aluno          & ver minha frequência em aulas e próximas reservas       & RF13       & \ok \\
+  H21 & visitante      & criar minha conta de aluno sem escolher plano           & RF03       & \ok \\
+  H22 & aluno          & escolher meu plano no primeiro login                    & RF03, RF06 & \ok \\
+  H23 & recepção/admin & filtrar alunos por situação, paginar e exportar CSV     & RF04       & \ok \\
+  H24 & usuário        & uma interface com a identidade visual da marca          & RNF03      & \ok \\
+  H25 & instrutor      & alertas de postura mais precisos, sem falsos positivos  & RF11       & \ok \\
+  \bottomrule
+\end{xltabular}
+
+\begin{quote}\small
+Os códigos RF/RNF seguem a numeração do código-fonte da v1.0.0. \textbf{RF13} (Aulas \& Agenda) é
+novo nesta versão; \textbf{RNF03} (identidade visual) é usado aqui apenas como rótulo desta
+documentação. A Seção~\ref{sec:rastreabilidade} traz a rastreabilidade.
+\end{quote}
+
+% =============================================================
+\section{Arquitetura geral}
+
+A arquitetura de \textbf{três camadas} da v1.0.0 foi mantida (SPA React, API REST FastAPI e
+PostgreSQL), com os módulos de IA acoplados à API. A novidade é o módulo de \textbf{Aulas}, que
+acrescenta um roteador, um serviço e duas tabelas.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    font=\small,
+    caixa/.style={draw=grafite, fill=white, rounded corners=3pt, align=center,
+                  minimum width=3.4cm, minimum height=0.9cm, line width=0.6pt},
+    nova/.style={draw=sucesso, fill=sucesso!8, rounded corners=3pt, align=center,
+                  minimum width=3.4cm, minimum height=0.9cm, line width=0.9pt},
+    grupo/.style={draw=grafite!60, fill=cinza, rounded corners=6pt, inner sep=10pt},
+    seta/.style={-{Stealth[length=2.5mm]}, line width=0.7pt, color=grafite!80!black},
+    banco/.style={cylinder, shape border rotate=90, aspect=0.25, draw=grafite,
+                  fill=grafite!10, align=center, minimum width=3cm, minimum height=1.5cm, line width=0.6pt}
+]
+  % Cliente
+  \node[caixa] (ui) {Páginas por perfil\\\footnotesize axios + JWT};
+  \node[nova, below=0.5cm of ui] (ui2) {Aulas, EscolherPlano\\\footnotesize novas telas};
+  \begin{scope}[on background layer]\node[grupo, fit=(ui)(ui2), label={[font=\footnotesize\bfseries]above:Navegador (SPA React + Vite)}] (cli) {};\end{scope}
+
+  % API
+  \node[caixa, right=2.4cm of ui] (r) {Routers REST};
+  \node[caixa, above=0.5cm of r]  (sec) {Auth JWT + bcrypt};
+  \node[caixa, below=0.5cm of r]  (s) {Serviços /\\Regras de negócio};
+  \node[nova, below=0.5cm of s]   (aul) {Aulas \& Agenda\\\footnotesize router + serviço};
+  \node[caixa, right=0.9cm of sec] (ai1) {IA: Evasão\\\footnotesize PyTorch};
+  \node[caixa, right=0.9cm of s]   (ai2) {IA: Postura\\\footnotesize torchvision + OpenCV};
+  \begin{scope}[on background layer]\node[grupo, fit=(sec)(aul)(ai1)(ai2), label={[font=\footnotesize\bfseries]above:Backend FastAPI (porta 8000)}] (api) {};\end{scope}
+
+  % Banco
+  \node[banco, below=1.3cm of api] (db) {PostgreSQL / Supabase\\\footnotesize schema \texttt{unifit}};
+
+  \draw[seta] (ui) -- node[above, font=\footnotesize]{HTTPS/JSON} (r);
+  \draw[seta] (r) -- (sec);
+  \draw[seta] (r) -- (s);
+  \draw[seta] (s) -- (aul);
+  \draw[seta] (r) -- (ai1);
+  \draw[seta] (r) -- (ai2);
+  \draw[seta] (aul.south) -- ++(0,-0.4) -| ([xshift=-6mm]db.north);
+  \draw[seta] (ai1.east) -- ++(0.5,0) |- (db.east);
+  \draw[seta] (ai2) -- (db.north -| ai2);
+\end{tikzpicture}
+\caption{Arquitetura do UniFit v1.0.1 (em verde, os componentes novos).}
+\end{figure}
+
+\textbf{Fluxo típico de uma requisição:} a tela chama a API via \cod{axios} (com o token JWT no
+header) $\rightarrow$ o \textit{router} valida o perfil (\cod{exige\_perfis}) $\rightarrow$
+delega para um \textit{serviço} com a regra de negócio $\rightarrow$ que lê/escreve no PostgreSQL
+$\rightarrow$ a resposta volta em JSON para a tela.
+
+\subsection{Arquivos novos e alterados no repositório}
+
+\begin{lstlisting}
+unifit/
+|-- backend/
+|   |-- app/
+|   |   |-- main.py           # (alterado) registra o router de aulas
+|   |   |-- schemas.py        # (alterado) AulaIn, ReservaIn, PresencaIn; plano_id opcional
+|   |   |-- routers/
+|   |   |   |-- aulas.py      # (novo) rotas da equipe
+|   |   |   |-- aluno.py      # (alterado) rotas de aulas do aluno
+|   |   |   `-- auth.py       # (alterado) cadastro sem plano
+|   |   |-- services/
+|   |   |   `-- aulas.py      # (novo) grade, reservas, presenca, performance
+|   |   `-- ai/postura.py     # (alterado) filtro de mediana e novos alertas
+|   `-- banco/
+|       |-- 008_aulas.sql     # (novo) migracao do modulo de aulas
+|       `-- schema.sql        # (alterado) regenerado
+|-- frontend/
+|   |-- index.html            # (alterado) icones, manifest, theme-color
+|   |-- vite.config.js        # (alterado) allowedHosts
+|   |-- public/               # (novo) favicons, manifest e marca
+|   `-- src/
+|       |-- pages/            # (novos) Aulas.jsx, EscolherPlano.jsx
+|       |-- components/       # (novos) Logo.jsx, PageHeader.jsx
+|       `-- styles.css        # (reescrito) tema escuro
+\end{lstlisting}
+
+% =============================================================
+\section{Backend (API REST)}
+
+\subsection{Tecnologias}
+
+Sem mudanças em relação à v1.0.0: \textbf{FastAPI}, \textbf{SQLAlchemy 2.0}, \cod{psycopg2},
+\textbf{Pydantic 2}, \textbf{JWT} + \textbf{bcrypt} e \textbf{PyTorch}/\textbf{torchvision}/\textbf{OpenCV}.
+Nenhuma dependência foi adicionada a \cod{requirements.txt} ou \cod{package.json}.
+
+\subsection{Camada de serviços}
+
+\begin{itemize}
+  \item \textbf{\cod{aulas.py}} (novo) --- grade da semana, CRUD de aulas, reserva de vaga com
+        controle de lotação, cancelamento, presença, lista de presentes (\textit{roster}),
+        performance geral e frequência do aluno.
+  \item Demais serviços (\cod{academia.py}, \cod{alunos.py}, \cod{usuarios.py}) permanecem inalterados.
+\end{itemize}
+
+\subsection{Cadastro de aluno com plano opcional}
+
+\begin{itemize}
+  \item \cod{CadastroAlunoIn.plano\_id} passou de \cod{int} para \cod{int | None = None}.
+  \item Em \cod{POST /auth/cadastro}, o plano é validado e a matrícula criada \textbf{somente} se
+        \cod{plano\_id} for enviado e o aluno ainda não tiver matrícula vigente. Conta, ficha e
+        matrícula continuam na \textbf{mesma transação}.
+\end{itemize}
+
+\begin{lstlisting}[language=Python]
+if dados.plano_id:
+    exige_plano_ativo(db, dados.plano_id)      # valida antes de criar a conta
+...
+if dados.plano_id and aluno and not matricula_vigente(db, aluno["id"]):
+    criar_matricula(db, aluno["id"], dados.plano_id, commit=False)
+\end{lstlisting}
+
+\subsection{Regras de negócio de Aulas \& Agenda}
+
+\begin{itemize}
+  \item A data da reserva deve cair no \textbf{dia da semana} da aula (senão \cod{400}).
+  \item Reserva em aula \textbf{lotada} é recusada (\cod{409}).
+  \item O aluno não reserva a mesma ocorrência duas vezes (restrição única, \cod{409}).
+  \item Aulas são \textbf{arquivadas} (\cod{ativo = false}), não apagadas; só aulas ativas aceitam reservas.
+  \item O aluno só cancela e faz check-in nas \textbf{próprias} reservas (RN04).
+  \item A hora de término deve ser posterior à de início (validação Pydantic e \cod{CHECK} no banco).
+  \item Taxa de presença: $\text{presença}\,\% = \text{presenças} / \text{reservas} \times 100$.
+\end{itemize}
+
+\subsection{Novos endpoints da API}
+
+Base: \cod{http://localhost:8000} $\cdot$ Documentação interativa: \textbf{\cod{/docs}} (Swagger).
+
+{\small
+\begin{xltabular}{\textwidth}{>{\bfseries\raggedright\arraybackslash}p{2.0cm} R{1.5cm} >{\ttfamily\raggedright\arraybackslash}p{4.6cm} Y R{2.2cm}}
+  \toprule
+  \normalfont\bfseries Módulo & \textbf{Método} & \normalfont\bfseries Rota & \textbf{Função} & \textbf{Acesso} \\
+  \midrule
+  \endfirsthead
+  \toprule
+  \normalfont\bfseries Módulo & \textbf{Método} & \normalfont\bfseries Rota & \textbf{Função} & \textbf{Acesso} \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+  Aulas (equipe) & GET   & /aulas/semana              & Grade da semana com ocupação       & equipe \\
+                 & GET   & /aulas/performance         & Indicadores por aula e instrutor   & equipe \\
+                 & GET   & /aulas                     & Listar definições de aula          & equipe \\
+                 & POST  & /aulas                     & Criar aula                         & equipe \\
+                 & PUT   & /aulas/\{id\}              & Editar aula                        & equipe \\
+                 & PATCH & /aulas/\{id\}              & Arquivar / reativar aula           & equipe \\
+                 & GET   & /aulas/\{id\}/reservas     & Lista de presença da ocorrência    & equipe \\
+                 & POST  & /aulas/\{id\}/reservas     & Reservar vaga para um aluno        & equipe \\
+                 & DELETE & /reservas/\{id\}          & Cancelar reserva                   & equipe \\
+                 & PATCH & /reservas/\{id\}           & Marcar / desmarcar presença        & equipe \\
+  \midrule
+  Aulas (aluno)  & GET   & /meu/aulas/semana          & Grade com a minha reserva          & aluno \\
+                 & GET   & /meu/aulas/frequencia      & Frequência e próximas reservas     & aluno \\
+                 & POST  & /meu/aulas/\{id\}/reservar & Reservar vaga                      & aluno \\
+                 & DELETE & /meu/reservas/\{id\}      & Cancelar minha reserva             & aluno \\
+                 & POST  & /meu/reservas/\{id\}/checkin & Check-in na aula                 & aluno \\
+  \midrule
+  Auth (alterado) & POST & /auth/cadastro             & Cadastro de aluno, plano opcional  & público \\
+\end{xltabular}
+}
+
+Acesso \textit{equipe}: administrador, recepção e instrutor.
+
+% =============================================================
+\section{Frontend (SPA)}
+
+\subsection{Tecnologias}
+
+Sem mudanças: \textbf{React 18} + \textbf{Vite 5}, \textbf{axios} e \textbf{Recharts}.
+Em \cod{vite.config.js}, \cod{server.allowedHosts = true} libera o servidor de desenvolvimento para
+túneis (\textit{cloudflared}, \textit{ngrok}) com domínios aleatórios; compartilhe a URL do túnel
+apenas com quem deve acessar, pois a proteção continua sendo o login da aplicação.
+
+\subsection{Fluxo de acesso do aluno}
+
+\begin{itemize}
+  \item \cod{Cadastro.jsx} não exibe mais o seletor de plano nem consulta \cod{/auth/planos}.
+  \item \cod{App.jsx} consulta \cod{/meu/resumo} para o perfil aluno; sem matrícula \textit{ativa}
+        e vigente (\cod{temPlanoAtivo}), exibe a tela \cod{EscolherPlano} no lugar do sistema.
+        Se a consulta falhar, o acesso é liberado para não bloquear o aluno por erro de rede.
+  \item \cod{EscolherPlano.jsx} lista os planos (\cod{GET /meu/planos}), assina o escolhido
+        (\cod{POST /meu/matricula}) e libera o acesso. Há botão \textit{Sair}.
+\end{itemize}
+
+\subsection{Telas novas e alteradas}
+
+\begin{xltabular}{\textwidth}{l l Y}
+  \toprule
+  \textbf{Tela} & \textbf{Arquivo} & \textbf{Mudança} \\
+  \midrule
+  \endhead
+  Aulas \& Agenda     & \cod{Aulas.jsx} (novo)         & Grade semanal, reservas, presença e performance; todos os perfis \\
+  Escolher plano      & \cod{EscolherPlano.jsx} (novo) & Cartões de plano exibidos no 1º login do aluno \\
+  Login               & \cod{Login.jsx}                & Painel \textit{hero} com a marca e novo formulário \\
+  Cadastro            & \cod{Cadastro.jsx}             & Sem seleção de plano; mesmo \textit{hero} do login \\
+  Dashboard           & \cod{Dashboard.jsx}            & Saudação, busca rápida, botão \textit{+ Novo aluno}, gráfico maior \\
+  Alunos              & \cod{Alunos.jsx}               & Filtros por situação, paginação (8/página), exportar CSV \\
+  Planos e matrículas & \cod{PlanosMatriculas.jsx}     & Seção ``Planos \& Preços'' em cartões (o 2º recebe a tag \textit{Popular}), botão \textit{+ Criar plano} e formulário em cartão \\
+  Menu lateral        & \cod{Sidebar.jsx}              & Ícones, avatar com iniciais, botão de sair \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Componentes novos}
+
+\begin{itemize}
+  \item \textbf{\cod{Logo.jsx}} --- marca oficial em SVG, variantes \cod{compacta} e \cod{horizontal}.
+  \item \textbf{\cod{PageHeader.jsx}} --- cabeçalho padrão (rótulo, título grande e ações à direita).
+        Dashboard, Aulas, Alunos e Planos montam o próprio cabeçalho.
+\end{itemize}
+
+% =============================================================
+\section{Interface do usuário --- versão 1.0.1}\label{sec:ui}
+
+A interface foi redesenhada sobre o novo \cod{styles.css} (cerca de 600 linhas alteradas), com
+tema escuro e cor de destaque em verde-limão (	extit{volt}).
+
+\subsection{Identidade visual}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}l l l}
+  \toprule
+  Elemento & Valor & Uso \\
+  \midrule
+  Fonte                 & Archivo (400--800)                 & todo o texto da interface \\
+  Cor de destaque       & \colorbox[HTML]{CBF50F}{\textcolor{black}{\ \cod{\#CBF50F}\ }} & botões, menu ativo, links \\
+  Fundo / painel        & \cod{\#0E0E0E} / \cod{\#161616}    & página / cartões e menu \\
+  Texto / texto suave   & \cod{\#F4F5F1} / \cod{\#8A8F86}    & conteúdo / rótulos \\
+  Sucesso               & \colorbox[HTML]{43C66B}{\textcolor{black}{\ \cod{\#43C66B}\ }} & pago, ativo, presente \\
+  Atenção               & \colorbox[HTML]{E0A32E}{\textcolor{black}{\ \cod{\#E0A32E}\ }} & pendente, alertas \\
+  Risco                 & \colorbox[HTML]{F0493C}{\textcolor{white}{\ \cod{\#F0493C}\ }} & atraso, risco de evasão \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Recursos de marca} (\cod{frontend/public/}): \cod{favicon.ico}, \cod{favicon.svg}, PNGs de
+16, 32 e 48\,px, \cod{apple-touch-icon.png}, ícones Android de 192 e 512\,px,
+\cod{site.webmanifest} e a pasta \cod{brand/} com os logotipos. O \cod{index.html} referencia os
+ícones e define \cod{theme-color} \cod{\#191919}.
+
+\textbf{Estrutura comum das telas internas:} menu lateral fixo de 260\,px (marca, rótulo
+\textit{Menu}, itens com ícone filtrados pelo perfil, avatar com iniciais, usuário logado e botão
+de sair) e área de conteúdo com cabeçalho (\textit{eyebrow} + título) e cartões de bordas
+arredondadas. Os estados de situação usam \textit{chips} coloridos.
+
+\subsection{Aulas \& Agenda}
+
+A tela tem duas abas, \textbf{Agenda} e \textbf{Performance}. A agenda é uma grade semanal de
+segunda a sábado, das 06h às 22h (1\,px por minuto), com navegação \textit{semana anterior / Hoje /
+próxima semana}. Aulas lotadas e aulas reservadas pelo aluno recebem destaque visual. Ao clicar em
+uma ocorrência abre-se um \textit{modal}: o aluno vê \textit{Reservar vaga}, \textit{Fazer check-in} e
+\textit{Cancelar reserva}; a equipe vê a lista de reservados, marca presença, reserva em nome de um
+aluno e acessa \textit{Editar aula}. Em \textit{+ Nova aula} a equipe cadastra nome, instrutor, dia,
+horário e capacidade, e pode \textit{Arquivar} a aula. Na aba Performance, o aluno vê sua frequência
+(\textit{Próximas aulas} e \textit{Histórico}).
+Para a equipe, a aba Performance mostra o total de reservas e presenças, a taxa de presença, o
+ranking das aulas mais reservadas e o consolidado por instrutor.
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\includegraphics[width=\textwidth]{imagens/ui/04 · Aulas & Agenda.png}}
+  \caption{Tela de Aulas \& Agenda.}\label{fig:ui-aulas}
+\end{figure}
+
+\subsection{Alunos}
+
+Cabeçalho com contador de ativos e botão \textit{Exportar} (CSV com separador \cod{;}, UTF-8 com BOM,
+arquivo \cod{alunos-unifit.csv}). Busca por nome, CPF ou e-mail, filtros \textit{Todos / Ativos /
+Pendentes / Inativos} e paginação de 8 alunos por página. A situação é classificada assim:
+
+\begin{enumerate}[label=(\alph*)]
+  \item \textbf{Pendente} --- mensalidade em atraso ou matrícula não vigente;
+  \item \textbf{Ativo} --- matrícula vigente e sem atrasos;
+  \item \textbf{Inativo} --- sem matrícula.
+\end{enumerate}
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\includegraphics[width=\textwidth]{imagens/ui/02 · Alunos.png}}
+  \caption{Tela de gestão de alunos.}\label{fig:ui-alunos}
+\end{figure}
+
+\subsection{Planos e matrículas}
+
+A listagem de planos, antes uma tabela, virou a seção \textbf{Planos \& Preços}: cada plano é um
+cartão com nome, preço (``/mês'' para planos de até 31 dias, ``/N dias'' nos demais), vigência,
+situação (\textit{Ativo}/\textit{Inativo}) e botão \textit{Editar plano} (administrador). O segundo
+plano da lista recebe a tag \textit{Popular}. O botão \textit{+ Criar plano} abre o formulário
+em um cartão com o título ``Novo plano'' ou ``Editar plano''. Os erros de carregamento passaram a
+ser exibidos pelo próprio componente.
+
+Para o aluno, a tela \textbf{EscolherPlano} reaproveita os mesmos cartões, com o botão
+\textit{Selecionar plano} e a mensagem ``Nenhum plano disponível no momento. Fale com a recepção.''
+quando não há planos à venda.
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\includegraphics[width=\textwidth]{imagens/ui/03 · Planos.png}}
+  \caption{Tela de planos e matrículas.}\label{fig:ui-planos}
+\end{figure}
+
+\subsection{Dashboard, Login e Cadastro}
+
+O Dashboard passa a saudar o usuário pelo primeiro nome, ganha busca rápida e o botão \textit{+ Novo
+aluno} (administração e recepção); o gráfico de check-ins ficou mais alto e sem animação, e há
+mensagem quando não existem alunos em risco. Login e Cadastro compartilham um painel \textit{hero}
+com a marca e a chamada ``Treine a sua academia para crescer''.
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\includegraphics[width=\textwidth]{imagens/ui/00 · Login.png}}
+  \caption{Tela de login.}\label{fig:ui-login}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\includegraphics[width=\textwidth]{imagens/ui/01 · Dashboard.png}}
+  \caption{Dashboard do perfil Administrador.}\label{fig:ui-dashboard}
+\end{figure}
+
+% =============================================================
+\section{Banco de dados}
+
+Mesmo schema \textbf{\cod{unifit}} no PostgreSQL/Supabase. A migração desta sprint é
+\cod{backend/banco/008\_aulas.sql} (\textbf{idempotente}) e o \cod{schema.sql} foi regenerado.
+
+\subsection{Novas tabelas}
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Tabela} & \textbf{Conteúdo} \\
+  \midrule
+  \endhead
+  \cod{aulas}         & Definição recorrente: nome, instrutor, \cod{dia\_semana} (0=segunda \ldots 6=domingo),
+                        \cod{hora\_inicio}, \cod{hora\_fim}, \cod{capacidade}, \cod{ativo} \\
+  \cod{aula\_reservas} & Reserva de um aluno em uma ocorrência (aula + \cod{data}), com \cod{presente} e \cod{presenca\_em} \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Restrições e índices}
+
+\begin{itemize}
+  \item \cod{aulas}: \cod{CHECK} de dia (0--6), capacidade $> 0$ e \cod{hora\_fim > hora\_inicio};
+        \cod{instrutor\_id} referencia \cod{usuarios} com \cod{ON DELETE SET NULL}.
+  \item \cod{aula\_reservas}: \cod{UNIQUE (aula\_id, aluno\_id, data)}; chaves estrangeiras para
+        \cod{aulas} e \cod{alunos} com \cod{ON DELETE CASCADE}.
+  \item Índices: \cod{aula\_reservas\_ocorrencia\_idx} \cod{(aula\_id, data)} e
+        \cod{aula\_reservas\_aluno\_idx} \cod{(aluno\_id, data DESC)}.
+\end{itemize}
+
+\subsection{Migração desta sprint}
+
+\begin{enumerate}
+  \item \textbf{\cod{008}} --- cria \cod{aulas} e \cod{aula\_reservas}, suas sequências, chaves
+        estrangeiras (verificando antes se já existem) e os dois índices.
+\end{enumerate}
+
+Para aplicar: executar o arquivo no SQL Editor do Supabase e, se necessário, regenerar o esquema
+de testes com \cod{python exportar\_schema.py}.
+
+% =============================================================
+\section{Módulos de Inteligência Artificial}
+
+A previsão de evasão (\cod{ai/churn.py}) não foi alterada. As mudanças estão em
+\cod{ai/postura.py}, com o objetivo de reduzir falsos positivos causados pela oscilação, quadro a
+quadro, da detecção de pose.
+
+\subsection{Pré-processamento}
+
+\begin{itemize}
+  \item \textbf{Filtro de mediana} (\cod{\_suavizar}, janela 5) no lugar da média móvel de 3 quadros:
+        remove picos de 1--2 quadros sem arredondar o movimento real. O resumo
+        (mínimo, máximo, amplitude) passa a ser calculado sobre séries suavizadas.
+  \item \textbf{Rastreamento instável} (\cod{\_instavel}): num sinal limpo, a variação total é
+        aproximadamente $2\cdot\text{reps}\cdot\text{amplitude}$ e as inversões de direção
+        $\approx 2\cdot\text{reps}$. O sinal é considerado instável quando a variação total
+        dividida pela amplitude excede $4\cdot\text{reps}$ ou quando as inversões excedem
+        $4\cdot\text{reps}$. Nesse caso só o aviso de enquadramento é emitido.
+  \item \textbf{Segmentação de repetições} (\cod{\_segmentos\_reps}): separa ciclos
+        alto $\rightarrow$ baixo $\rightarrow$ alto (limiares a 35\% da amplitude) e devolve
+        (fundo, topo) de cada repetição.
+\end{itemize}
+
+\subsection{Alertas de execução}
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Alerta} & \textbf{Condição} \\
+  \midrule
+  \endhead
+  Pessoa pouco detectada            & pessoa em menos de 50\% dos quadros \\
+  Rastreamento instável (novo)      & \cod{\_instavel} verdadeiro; encerra a análise de execução \\
+  Amplitude curta                   & amplitude $\geq 30^\circ$ e ângulo mínimo $> 100^\circ$ \\
+  Extensão incompleta (novo)        & membro superior com cotovelo máximo $< 150^\circ$ \\
+  Diferença entre lados             & mínimos esquerdo/direito diferem mais de $15^\circ$ (cobertura $\geq 60\%$) \\
+  Assimetria na extensão (novo)     & máximos esquerdo/direito diferem mais de $15^\circ$ \\
+  Repetições desiguais (novo)       & profundidade varia mais de $25^\circ$ entre repetições \\
+  Repetição parcial (novo)          & alguma repetição com amplitude $< 60\%$ da maior \\
+  Tronco à frente                   & joelho como articulação principal e tronco acima de $50^\circ$ \\
+  \bottomrule
+\end{xltabular}
+
+A resposta da análise ganhou o campo booleano \cod{rastreamento\_estavel}. Continuam valendo as
+observações da v1.0.0: são \textbf{heurísticas de apoio ao instrutor}, não diagnóstico clínico.
+
+% =============================================================
+\section{Perfis e permissões (matriz)}
+
+Matriz do módulo \textbf{Aulas \& Agenda} (as demais permissões da v1.0.0 não mudaram).
+
+\begin{xltabular}{\textwidth}{X c c c c}
+  \toprule
+  \textbf{Funcionalidade} & \textbf{Aluno} & \textbf{Recepção} & \textbf{Instrutor} & \textbf{Admin} \\
+  \midrule
+  \endhead
+  Ver grade da semana                & \ok  & \ok  & \ok  & \ok \\
+  Criar / editar / arquivar aulas    & \nao & \ok  & \ok  & \ok \\
+  Ver performance geral              & \nao & \ok  & \ok  & \ok \\
+  Reservar vaga                      & \ok$^{*}$ & \ok$^{**}$ & \ok$^{**}$ & \ok$^{**}$ \\
+  Cancelar reserva                   & \ok$^{*}$ & \ok  & \ok  & \ok \\
+  Registrar presença                 & \ok$^{*}$ & \ok  & \ok  & \ok \\
+  Ver a própria frequência           & \ok  & \nao & \nao & \nao \\
+  Escolher plano no 1º login         & \ok  & \nao & \nao & \nao \\
+  \bottomrule
+\end{xltabular}
+
+{\small $^{*}$ Somente as próprias reservas (RN04). $^{**}$ Reserva em nome de um aluno.}
+
+% =============================================================
+\section{Rastreabilidade de requisitos}\label{sec:rastreabilidade}
+
+\begin{xltabular}{\textwidth}{l l Y}
+  \toprule
+  \textbf{Código} & \textbf{Requisito} & \textbf{Onde é atendido} \\
+  \midrule
+  \endhead
+  RF13  & Aulas \& Agenda (grade, reserva, presença) & \cod{routers/aulas.py}, \cod{routers/aluno.py}, \cod{services/aulas.py}, \cod{Aulas.jsx} \\
+  RF03  & Cadastro de aluno (plano opcional)         & \cod{POST /auth/cadastro}, \cod{EscolherPlano.jsx}, \cod{App.jsx} \\
+  RF06  & Planos e matrículas (escolha no 1º login)  & \cod{POST /meu/matricula} \\
+  RF04  & Gestão de alunos (filtros, CSV)            & \cod{Alunos.jsx} \\
+  RF09  & Dashboard / performance de aulas           & \cod{Dashboard.jsx}, \cod{GET /aulas/performance} \\
+  RF11  & Análise de postura                         & \cod{ai/postura.py} \\
+  RF02  & Acesso por perfil                          & \cod{deps.exige\_perfis} $\cdot$ \cod{Sidebar.MENU} \\
+  RNF03 & Identidade visual                          & \cod{Logo.jsx}, \cod{PageHeader.jsx}, \cod{styles.css}, \cod{public/} \\
+  \bottomrule
+\end{xltabular}
+
+% =============================================================
+\section{Como executar (ambiente local)}
+
+Pré-requisitos: \textbf{Python 3.11+}, \textbf{Node 18+} e acesso a um PostgreSQL (Supabase).
+
+\begin{enumerate}
+  \item \textbf{Configurar segredos:} copiar \cod{.env.example} para \cod{.env} e preencher
+        \cod{DB\_HOST}, \cod{DB\_PASSWORD} e \cod{JWT\_SECRET}.
+  \item \textbf{Aplicar a migração} \cod{backend/banco/008\_aulas.sql} no SQL Editor do Supabase.
+  \item \textbf{Backend:}
+\begin{lstlisting}[language=bash]
+cd backend
+python -m venv .venv && .venv\Scripts\activate   # (Windows)
+pip install -r requirements.txt
+python criar_admin.py                            # cria o 1º administrador
+python -m uvicorn app.main:app --reload --port 8000
+\end{lstlisting}
+  \item \textbf{Frontend:}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm install
+npm run dev
+\end{lstlisting}
+  \item Acessar \textbf{\url{http://localhost:5173}} (app) e \textbf{\url{http://localhost:8000/docs}} (API).
+\end{enumerate}
+
+\begin{quote}\small
+Alternativas: \cod{docker compose up --build} (site e API em \url{http://localhost:8080}) e
+\cod{python -m pytest} no diretório \cod{backend} para os testes.
+\end{quote}
+
+% =============================================================
+\section{Decisões técnicas e justificativas}
+
+\begin{xltabular}{\textwidth}{>{\raggedright\arraybackslash}p{5cm} Y}
+  \toprule
+  \textbf{Decisão} & \textbf{Justificativa} \\
+  \midrule
+  \endhead
+  Aula como definição recorrente + reserva por data & Evita gerar linhas para cada ocorrência futura; a ocorrência é calculada a partir do dia da semana. \\
+  Arquivar aula em vez de apagar & Preserva o histórico de reservas e presenças. \\
+  Plano escolhido no 1º login & Reduz o atrito do cadastro e permite que a ficha criada pela recepção já traga um plano ativo. \\
+  Bloqueio de acesso sem plano no frontend & Entrega rápida; o libera-em-caso-de-falha evita travar o aluno por erro de rede. \\
+  Filtro de mediana na postura & Robusto a picos isolados do modelo de pose, sem suavizar o movimento real. \\
+  Suprimir alertas finos se o rastreamento é instável & Evita falsos positivos quando o sinal não é confiável. \\
+  \bottomrule
+\end{xltabular}
+
+% =============================================================
+\section{Resultado da sprint e próximos passos}
+
+\subsection{Entregue nesta sprint (v1.0.1)}
+
+\begin{itemize}
+  \item Módulo \textbf{Aulas \& Agenda} completo (banco, API, serviço e tela) para os quatro perfis.
+  \item Novo fluxo de cadastro e tela de \textbf{escolha de plano} no primeiro login.
+  \item \textbf{Identidade visual} nova: marca, ícones, tema escuro, menu e cabeçalhos.
+  \item Alunos com filtros, paginação e exportação CSV.
+  \item \textbf{Análise de postura} com filtro de mediana e cinco novos alertas/avisos.
+\end{itemize}
+
+\subsection{Limitações conhecidas}
+
+\begin{itemize}
+  \item Não há testes automatizados para o módulo de aulas (lotação, data incompatível, isolamento entre alunos).
+  \item A verificação de lotação ocorre antes da inserção, sem bloqueio de linha; reservas
+        simultâneas podem ultrapassar a capacidade em uma vaga.
+  \item A API não impede reservas em datas passadas nem exige plano ativo no momento da reserva.
+  \item O bloqueio de aluno sem plano é aplicado no frontend; os endpoints do aluno não o exigem.
+  \item Os limiares da análise de postura ($15^\circ$, $25^\circ$, $60\%$) são empíricos e precisam
+        de calibração com vídeos reais.
+  \item A IA de evasão continua treinada com dados sintéticos.
+\end{itemize}
+
+\subsection{Próxima sprint (sugestão de backlog)}
+
+\begin{enumerate}
+  \item Testes automatizados do módulo de aulas e controle de concorrência na reserva.
+  \item Exigir plano ativo no backend para reservas e demais ações do aluno.
+  \item Calibrar a análise de postura com vídeos reais e registrar métricas.
+  \item Treinar a IA de evasão com dados reais.
+\end{enumerate}
+
+\vfill
+\begin{center}\small\itshape
+ UniFit --- Versão 1.0.1.
+\end{center}
+
+\end{document}

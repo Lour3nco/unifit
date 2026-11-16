@@ -7,6 +7,8 @@ CREATE TYPE "unifit".status_pagamento AS ENUM ('pendente', 'pago', 'atrasado', '
 
 CREATE SEQUENCE IF NOT EXISTS "unifit".alunos_id_seq;
 CREATE SEQUENCE IF NOT EXISTS "unifit".api_keys_id_seq;
+CREATE SEQUENCE IF NOT EXISTS "unifit".aulas_id_seq;
+CREATE SEQUENCE IF NOT EXISTS "unifit".aula_reservas_id_seq;
 CREATE SEQUENCE IF NOT EXISTS "unifit".alunos_numero_matricula_seq;
 CREATE SEQUENCE IF NOT EXISTS "unifit".checkins_id_seq;
 CREATE SEQUENCE IF NOT EXISTS "unifit".exercicios_id_seq;
@@ -53,6 +55,34 @@ CREATE TABLE "unifit".api_keys (
     criado_em timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT api_keys_pkey PRIMARY KEY (id),
     CONSTRAINT api_keys_token_hash_key UNIQUE (token_hash)
+);
+
+CREATE TABLE "unifit".aulas (
+    id bigint DEFAULT nextval('"unifit".aulas_id_seq'::regclass) NOT NULL,
+    nome character varying(80) NOT NULL,
+    instrutor_id bigint,
+    dia_semana smallint NOT NULL,
+    hora_inicio time NOT NULL,
+    hora_fim time NOT NULL,
+    capacidade smallint NOT NULL,
+    ativo boolean DEFAULT true NOT NULL,
+    criado_em timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT aulas_pkey PRIMARY KEY (id),
+    CONSTRAINT aulas_dia_check CHECK (dia_semana BETWEEN 0 AND 6),
+    CONSTRAINT aulas_cap_check CHECK (capacidade > 0),
+    CONSTRAINT aulas_hora_check CHECK (hora_fim > hora_inicio)
+);
+
+CREATE TABLE "unifit".aula_reservas (
+    id bigint DEFAULT nextval('"unifit".aula_reservas_id_seq'::regclass) NOT NULL,
+    aula_id bigint NOT NULL,
+    aluno_id bigint NOT NULL,
+    data date NOT NULL,
+    presente boolean DEFAULT false NOT NULL,
+    presenca_em timestamp with time zone,
+    criado_em timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT aula_reservas_pkey PRIMARY KEY (id),
+    CONSTRAINT aula_reservas_unica UNIQUE (aula_id, aluno_id, data)
 );
 
 CREATE TABLE "unifit".checkins (
@@ -194,6 +224,9 @@ CREATE TABLE "unifit".usuarios (
 
 ALTER TABLE "unifit".alunos ADD CONSTRAINT alunos_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES "unifit".usuarios(id) ON DELETE SET NULL;
 ALTER TABLE "unifit".api_keys ADD CONSTRAINT api_keys_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES "unifit".usuarios(id) ON DELETE CASCADE;
+ALTER TABLE "unifit".aulas ADD CONSTRAINT aulas_instrutor_id_fkey FOREIGN KEY (instrutor_id) REFERENCES "unifit".usuarios(id) ON DELETE SET NULL;
+ALTER TABLE "unifit".aula_reservas ADD CONSTRAINT aula_reservas_aula_id_fkey FOREIGN KEY (aula_id) REFERENCES "unifit".aulas(id) ON DELETE CASCADE;
+ALTER TABLE "unifit".aula_reservas ADD CONSTRAINT aula_reservas_aluno_id_fkey FOREIGN KEY (aluno_id) REFERENCES "unifit".alunos(id) ON DELETE CASCADE;
 ALTER TABLE "unifit".checkins ADD CONSTRAINT checkins_aluno_id_fkey FOREIGN KEY (aluno_id) REFERENCES "unifit".alunos(id) ON DELETE CASCADE;
 ALTER TABLE "unifit".matriculas ADD CONSTRAINT matriculas_aluno_id_fkey FOREIGN KEY (aluno_id) REFERENCES "unifit".alunos(id) ON DELETE CASCADE;
 ALTER TABLE "unifit".matriculas ADD CONSTRAINT matriculas_plano_id_fkey FOREIGN KEY (plano_id) REFERENCES "unifit".planos(id);

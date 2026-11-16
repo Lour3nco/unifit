@@ -1,0 +1,484 @@
+% =============================================================
+%  Documentação de Sprint — UniFit — Sprint 05
+%  "Segundo módulo funcionando"
+%  Compilar com pdflatex (2x para o sumário). Funciona no Overleaf.
+%  Evidências: coloque os prints em imagens/sprint05/ (ou em imagens/)
+%  com os nomes indicados em cada \evidencia{...}; enquanto faltarem,
+%  aparece uma caixa cinza no lugar. No PDF final, una as Sprints
+%  anteriores antes deste documento (exigência do Teams).
+% =============================================================
+\documentclass[11pt,a4paper,final]{article}
+
+% ---------- Idioma e codificação ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath}
+
+% ---------- Layout ----------
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% ---------- Tabelas, cores, símbolos ----------
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xltabular}
+\usepackage[table]{xcolor}
+\usepackage{pifont}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,arrows.meta,shapes.geometric,backgrounds}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[font=small]{caption}
+\graphicspath{{imagens/}{imagens/sprint05/}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Paleta ----------
+\definecolor{azul}{HTML}{2B50AA}
+\definecolor{cinza}{HTML}{F2F2F2}
+\definecolor{verde}{HTML}{2E7D32}
+\definecolor{codbg}{HTML}{F6F8FA}
+
+\titleformat{\section}{\Large\bfseries\color{azul}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{azul}}{\thesubsection}{0.6em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small UniFit — Documentação de Sprint}
+\rhead{\small Sprint 05}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---------- Comandos auxiliares ----------
+\newcommand{\ok}{\textcolor{verde}{\ding{51}}}
+\newcommand{\nao}{---}
+\newcommand{\cod}[1]{\texttt{#1}}
+\newcommand{\preencher}[1]{\textit{\textcolor{gray}{#1}}}
+\renewcommand{\arraystretch}{1.25}
+
+% tamanho máximo dos prints: cabem na largura do texto e ocupam no máximo ~1/3 da página
+\newlength{\evidW}\newlength{\evidH}
+\AtBeginDocument{\setlength{\evidW}{0.82\textwidth}\setlength{\evidH}{0.32\textheight}}
+\setlength{\fboxsep}{1pt}
+\captionsetup{font=small,skip=4pt}
+
+% \evidencia{arquivo}{legenda}{rótulo}: usa o print se existir; senão mostra caixa de aviso
+\newcommand{\evidencia}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{imagens/sprint05/#1}{%
+      \fbox{\includegraphics[width=\evidW,height=\evidH,keepaspectratio]{imagens/sprint05/#1}}%
+    }{\IfFileExists{imagens/#1}{%
+      \fbox{\includegraphics[width=\evidW,height=\evidH,keepaspectratio]{imagens/#1}}%
+    }{%
+      \fcolorbox{gray!60}{cinza}{\parbox[c][2.4cm][c]{0.8\textwidth}{\centering
+        \preencher{Inserir print: \texttt{imagens/sprint05/\detokenize{#1}}}}}%
+    }}
+    \caption{#2}\label{#3}
+  \end{figure}}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codbg},
+  frame=single, rulecolor=\color{gray!40},
+  breaklines=true, columns=fullflexible,
+  keepspaces=true, showstringspaces=false,
+  xleftmargin=4pt, xrightmargin=4pt,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1 {ê}{{\^e}}1 {º}{{\textordmasculine}}1
+}
+
+% =============================================================
+\begin{document}
+
+% ---------- Capa ----------
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries\color{azul} UniFit\par}
+  \vspace{0.6cm}
+  {\LARGE Documentação de Sprint\par}
+  \vspace{0.3cm}
+  {\Large Sprint 05 --- Segundo módulo funcionando\par}
+  \vspace{1.2cm}
+  {\large Sistema de gestão de academia com previsão de evasão\\
+  e análise de postura por vídeo\par}
+  \vspace{0.8cm}
+  {\small\textbf{Stack:} React + Vite $\cdot$ FastAPI $\cdot$ PostgreSQL (Supabase) $\cdot$ PyTorch\par}
+  \vfill
+  \begin{tabular}{>{\bfseries}l l}
+    \toprule
+    Instituição / Curso & \textbf{UNINASSAU - RECIFE / CIEN. DA COMPUTAÇÃO} \\
+    Disciplina          & \textbf{FABRICA DE SOFTWARE} \\
+    Grupo               & \preencher{Nº do grupo} --- \textbf{UniFit} \\
+    Equipe              & \textbf{Lucas Lourenço, Amhos Cezar, Carlos Guilherme, Vitor Lima} \\
+    Scrum Master        & \preencher{Nome do líder} \\
+    Entrega             & \textbf{Sprint 05 --- data-limite: 03/10} \\
+    Repositório         & \cod{github.com/Lour3nco/unifit} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{1.5cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+
+% =============================================================
+\section{Escopo da Sprint}
+
+A Sprint 05 entrega o \textbf{segundo módulo} do UniFit: \textbf{Treinos e Evolução do Aluno}. Ele é usado pelo
+instrutor (e pelo administrador) para montar fichas de treino e acompanhar o progresso, e pelo aluno para
+consultar suas fichas e registrar o que executou. O primeiro módulo (Alunos, Planos, Matrículas e Financeiro,
+Sprint 04) fornece o aluno e o vínculo com a matrícula; o segundo módulo se apoia nele.
+
+\subsection{Checklist das entregas obrigatórias}
+
+\begin{xltabular}{\textwidth}{l Y R{4.4cm} c}
+  \toprule
+  \textbf{\#} & \textbf{Entrega} & \textbf{Onde está} & \textbf{Status} \\
+  \midrule
+  \endhead
+  1 & Segundo módulo completo e integrado          & Seções~\ref{sec:modulo} e~\ref{sec:fluxo} & \ok \\
+  2 & Integração com o banco de dados              & Seção~\ref{sec:banco}   & \ok \\
+  3 & Regras de negócio implementadas/atualizadas  & Seção~\ref{sec:regras}  & \ok \\
+  4 & Testes das funcionalidades                   & Seção~\ref{sec:testes}  & \preencher{executar e registrar} \\
+  5 & Correção dos bugs encontrados                & Seção~\ref{sec:bugs}    & \preencher{preencher} \\
+  6 & Link do repositório GitHub atualizado        & Seção~\ref{sec:repo}    & \ok \\
+  7 & Dificuldades e próximos passos               & Seção~\ref{sec:proximos} & \ok \\
+  \bottomrule
+\end{xltabular}
+
+% =============================================================
+\section{Descrição do segundo módulo}\label{sec:modulo}
+
+O módulo \textbf{Treinos e Evolução} cobre o ciclo completo: o instrutor mantém o catálogo de exercícios, monta
+a ficha de cada aluno, o aluno executa e registra o treino, e o sistema transforma esses registros em
+histórico e curvas de evolução.
+
+\subsection{Funcionalidades}
+
+\begin{xltabular}{\textwidth}{R{3.6cm} Y R{3.2cm}}
+  \toprule
+  \textbf{Funcionalidade} & \textbf{Descrição} & \textbf{Perfil} \\
+  \midrule
+  \endhead
+  Catálogo de exercícios & Cadastro e edição de exercícios (nome único, grupo muscular, descrição). & Administrador, instrutor \\
+  Fichas de treino & Criar, editar, arquivar e reativar fichas por aluno, com exercícios em ordem (séries, repetições, carga e descanso). Itens podem ser reordenados e removidos. & Administrador, instrutor \\
+  Minhas fichas & O aluno vê apenas as fichas \textbf{ativas} dele, com os exercícios na ordem definida. & Aluno \\
+  Registro de execução & Lançamento do que foi feito em uma sessão (séries, repetições e carga realizados, data e observação). Pode ser feito pelo aluno (``Registrar treino de hoje'') ou pelo instrutor (``Registrar treino feito''). & Aluno, instrutor, administrador \\
+  Histórico de sessões & Lista das últimas 30 sessões com os itens de cada uma; exclusão de registro lançado por engano. & Aluno, instrutor, administrador \\
+  Evolução por exercício & Para cada exercício registrado, a série de pontos no tempo com carga e volume ($\text{séries}\times\text{repetições}\times\text{carga}$). & Aluno, instrutor, administrador \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Endpoints do módulo}
+
+\begin{xltabular}{\textwidth}{l l Y R{3.2cm}}
+  \toprule
+  \textbf{Método} & \textbf{Rota} & \textbf{Função} & \textbf{Perfis} \\
+  \midrule
+  \endhead
+  GET  & \cod{/exercicios}                 & Lista o catálogo (por grupo e nome)            & Adm., instrutor \\
+  POST & \cod{/exercicios}                 & Cria exercício (409 se o nome já existe)       & Adm., instrutor \\
+  PUT  & \cod{/exercicios/\{id\}}          & Altera exercício                                & Adm., instrutor \\
+  GET  & \cod{/treinos?aluno\_id=}         & Fichas do aluno (ativas e arquivadas)           & Adm., instrutor \\
+  POST & \cod{/treinos}                    & Cria ficha com seus itens                       & Adm., instrutor \\
+  PUT  & \cod{/treinos/\{id\}}             & Altera ficha e regrava os itens                 & Adm., instrutor \\
+  PATCH & \cod{/treinos/\{id\}}            & Arquiva (\cod{ativo=false}) ou reativa          & Adm., instrutor \\
+  POST & \cod{/treinos/\{id\}/sessoes}     & Registra uma execução                           & Adm., instrutor \\
+  GET  & \cod{/sessoes?aluno\_id=}         & Histórico de sessões do aluno                   & Adm., instrutor \\
+  GET  & \cod{/evolucao?aluno\_id=}        & Série de evolução por exercício                 & Adm., instrutor \\
+  DELETE & \cod{/sessoes/\{id\}}           & Exclui um registro de execução                  & Adm., instrutor \\
+  GET  & \cod{/meu/treinos}                & Fichas ativas do próprio aluno                  & Aluno \\
+  GET  & \cod{/meu/sessoes}, \cod{/meu/evolucao} & Histórico e evolução do próprio aluno    & Aluno \\
+  POST & \cod{/meu/treinos/\{id\}/sessoes} & Aluno registra a própria execução               & Aluno \\
+  DELETE & \cod{/meu/sessoes/\{id\}}       & Aluno exclui o próprio registro                 & Aluno \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Telas}
+
+\begin{itemize}
+  \item \textbf{Treinos} (instrutor/administrador): busca do aluno $\rightarrow$ abas \emph{Fichas de treino} e
+        \emph{Evolução}, além do catálogo de exercícios.
+  \item \textbf{Treinos} (aluno): abas \emph{Meus treinos} e \emph{Minha evolução}, com o botão para registrar o
+        treino do dia. A mesma rota do menu mostra a tela certa conforme o perfil.
+\end{itemize}
+
+% =============================================================
+\section{Fluxo completo de utilização}\label{sec:fluxo}
+
+\begin{enumerate}
+  \item O instrutor entra e abre \textbf{Treinos}; cadastra (ou reaproveita) exercícios no catálogo.
+  \item Escolhe o aluno e cria a ficha (ex.: ``Treino A --- Pernas''), escolhendo exercícios, séries,
+        repetições, carga e descanso; reordena e salva.
+  \item O aluno entra com a conta dele, abre \textbf{Treinos} e vê a ficha ativa.
+  \item Após treinar, o aluno clica em \textbf{Registrar treino de hoje} e informa o que realizou.
+  \item O registro vai para o histórico e alimenta a \textbf{evolução}; o instrutor vê o mesmo histórico do aluno.
+  \item Quando a ficha deixa de valer, o instrutor a \textbf{arquiva}: o aluno deixa de vê-la, mas o histórico
+        é preservado.
+\end{enumerate}
+
+\evidencia{s05_treinos_catalogo.png}{Catálogo de exercícios (instrutor): lista e cadastro de exercício.}{fig:catalogo}
+\evidencia{s05_treinos_busca_aluno.png}{Treinos: escolha do aluno para abrir as fichas.}{fig:busca}
+\evidencia{s05_ficha_nova.png}{Nova ficha: exercícios com séries, repetições, carga e descanso.}{fig:ficha-nova}
+\evidencia{s05_ficha_lista.png}{Fichas do aluno com ações editar e arquivar.}{fig:ficha-lista}
+\evidencia{s05_meus_treinos.png}{Visão do aluno: ``Meus treinos'' com a ficha ativa.}{fig:meus-treinos}
+\evidencia{s05_registrar_treino.png}{Aluno registrando o treino realizado.}{fig:registrar}
+\evidencia{s05_historico_sessoes.png}{Histórico de sessões registradas.}{fig:historico}
+\evidencia{s05_evolucao.png}{Evolução por exercício (carga e volume ao longo do tempo).}{fig:evolucao}
+
+% =============================================================
+\section{Integração com o banco de dados}\label{sec:banco}
+
+O módulo grava e lê tudo no PostgreSQL (schema \cod{unifit}, Supabase) pelas rotas acima; nada fica apenas
+no navegador. As tabelas do módulo:
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Tabela} & \textbf{Papel e restrições} \\
+  \midrule
+  \endhead
+  \cod{exercicios}          & Catálogo. \cod{nome} \textbf{único}. \\
+  \cod{treinos}             & Ficha: \cod{aluno\_id}, \cod{instrutor\_id}, nome, objetivo, \cod{ativo}, \cod{criado\_em}. Apagar o aluno apaga as fichas (\cod{ON DELETE CASCADE}); apagar o instrutor mantém a ficha (\cod{SET NULL}). \\
+  \cod{treino\_itens}       & Exercícios da ficha, com \cod{ordem}. \cod{CHECK}: séries $>0$ e repetições $>0$. Apagar a ficha apaga os itens. \\
+  \cod{treino\_sessoes}     & Uma execução (dia em que o aluno treinou): \cod{treino\_id}, \cod{aluno\_id}, \cod{data\_hora}, observação, \cod{registrado\_por}. Índice por aluno e data. \\
+  \cod{treino\_sessao\_itens} & O que foi feito em cada exercício: séries, repetições e carga realizadas (opcionais, mas nunca negativas). Apagar a sessão apaga os itens. \\
+  \bottomrule
+\end{xltabular}
+
+A migração \cod{003\_registros\_treino.sql} criou as tabelas de execução e é idempotente (pode ser reaplicada
+no Supabase). Operações que mexem em mais de uma tabela (criar/editar ficha com itens, registrar sessão com
+itens) são feitas \textbf{na mesma transação}: ou grava tudo, ou nada.
+
+\subsection{Como demonstrar a persistência}
+
+\begin{enumerate}
+  \item Criar uma ficha para um aluno e registrar uma sessão.
+  \item Conferir as linhas em \cod{treinos}, \cod{treino\_itens}, \cod{treino\_sessoes} e \cod{treino\_sessao\_itens} no Supabase.
+  \item Encerrar backend e frontend, subir novamente e abrir a tela: ficha, histórico e evolução continuam lá.
+\end{enumerate}
+
+\evidencia{s05_banco_treinos.png}{Tabelas \cod{treinos} e \cod{treino\_itens} no Supabase com a ficha criada.}{fig:banco-treinos}
+\evidencia{s05_banco_sessoes.png}{Tabelas \cod{treino\_sessoes} e \cod{treino\_sessao\_itens} com o registro da execução.}{fig:banco-sessoes}
+\evidencia{s05_persistencia_depois.png}{Após reiniciar a aplicação, ficha e histórico continuam disponíveis.}{fig:pers-depois5}
+
+% =============================================================
+\section{Regras de negócio}\label{sec:regras}
+
+\subsection{Regras implementadas}
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Regra} & \textbf{Descrição} \\
+  \midrule
+  \endhead
+  RN-T1 & Só administrador e instrutor gerenciam exercícios e fichas; o aluno só consulta as próprias (403 nos demais casos). \\
+  RN-T2 & O nome do exercício é único; repetir devolve 409. \\
+  RN-T3 & Toda ficha pertence a um aluno existente e tem de 1 a 30 exercícios; a ordem é a posição na lista. \\
+  RN-T4 & Ficha \textbf{arquivada} deixa de aparecer ao aluno, mas continua para a equipe e não perde histórico; pode ser reativada. \\
+  RN-T5 & Ao editar a ficha, os itens são regravados na mesma transação; a ficha só é alterada com o aluno dono dela (senão 404). \\
+  RN-T6 & Registrar sessão exige que o treino exista e, no caso do aluno, seja \textbf{dele}; exercício inexistente devolve 404 e nada é gravado. \\
+  RN-T7 & A data da sessão é opcional; se vazia, vale o momento do registro. \\
+  RN-T8 & Volume do exercício = séries $\times$ repetições $\times$ carga; só é calculado quando os três valores existem. \\
+  RN-T9 & O aluno só apaga os \textbf{próprios} registros; a equipe pode apagar qualquer um. \\
+  RN-T10 & Aluno sem ficha de aluno vinculada (conta sem cadastro) recebe lista vazia, sem erro. \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Regras alteradas em relação ao planejamento}
+
+\preencher{Registre aqui as regras que mudaram em relação ao planejamento das Sprints anteriores, com a
+justificativa de cada decisão (ex.: se a execução passou a poder ser lançada pelo instrutor, se a ficha
+arquivada deixou de aparecer ao aluno etc.).}
+
+\subsection{Validações de dados}
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Campo} & \textbf{Regra} \\
+  \midrule
+  \endhead
+  Exercício: nome / grupo / descrição & 2 a 120 caracteres / até 60 / até 2000 \\
+  Ficha: nome / objetivo               & 2 a 80 caracteres / até 120 \\
+  Ficha: itens                         & 1 a 30 exercícios \\
+  Item: séries / repetições            & 1 a 20 / 1 a 200 \\
+  Item: carga / descanso               & 0 a 1000 kg / 0 a 900 s \\
+  Execução: séries / repetições        & 0 a 50 / 0 a 500 (vazio = não registrado) \\
+  Execução: carga / observação         & 0 a 1000 kg / até 500 caracteres \\
+  Execução: itens                      & 1 a 30 \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Mensagens de erro do módulo}
+
+\begin{xltabular}{\textwidth}{c Y Y}
+  \toprule
+  \textbf{HTTP} & \textbf{Mensagem} & \textbf{Quando} \\
+  \midrule
+  \endhead
+  409 & ``Já existe um exercício com este nome.'' & Cadastro/edição com nome repetido \\
+  404 & ``Exercício não encontrado.''              & Exercício inexistente em ficha ou execução \\
+  404 & ``Treino não encontrado.''                 & Ficha inexistente ou de outro aluno \\
+  404 & ``Registro não encontrado.''               & Exclusão de sessão inexistente ou alheia \\
+  403 & Acesso negado ao perfil                    & Aluno chamando rota da equipe e vice-versa \\
+  401 & Sessão inválida ou expirada                & Sem login ou token inválido \\
+  422 & Mensagens de campo (traduzidas na tela)    & Séries, repetições, carga etc. fora dos limites \\
+  \bottomrule
+\end{xltabular}
+
+\evidencia{s05_erro_exercicio_duplicado.png}{Erro: exercício com nome já existente.}{fig:err-ex}
+\evidencia{s05_erro_validacao_ficha.png}{Validação: séries/repetições fora do limite na ficha.}{fig:err-ficha}
+\evidencia{s05_erro_403_aluno.png}{Aluno sem acesso à rota da equipe (403).}{fig:err-403}
+
+% =============================================================
+\section{Testes realizados}\label{sec:testes}
+
+\subsection{Testes automatizados}
+
+A suíte (\cod{python -m pytest}, 53 testes) roda em um schema temporário criado a partir de
+\cod{schema.sql} e das migrações, descartado ao final. Os testes que tocam o segundo módulo:
+
+\begin{xltabular}{\textwidth}{R{6.4cm} Y c}
+  \toprule
+  \textbf{Teste} & \textbf{O que garante} & \textbf{Resultado} \\
+  \midrule
+  \endhead
+  \cod{test\_\allowbreak cada\_\allowbreak perfil\_\allowbreak so\_\allowbreak acessa\_\allowbreak as\_\allowbreak proprias\_\allowbreak rotas} (\cod{/exercicios}, \cod{/meu/treinos}) & Instrutor/administrador acessam o catálogo; aluno acessa só \cod{/meu/treinos}; demais perfis recebem 403 & \ok \\
+  \cod{test\_\allowbreak sem\_\allowbreak login\_\allowbreak nada\_\allowbreak abre} & Sem token, as rotas do módulo devolvem 401 & \ok \\
+  \cod{test\_\allowbreak perfil\_\allowbreak vale\_\allowbreak o\_\allowbreak do\_\allowbreak banco\_\allowbreak e\_\allowbreak nao\_\allowbreak o\_\allowbreak do\_\allowbreak token} & Mudar o perfil tem efeito imediato & \ok \\
+  \cod{test\_\allowbreak conta\_\allowbreak desativada\_\allowbreak perde\_\allowbreak o\_\allowbreak acesso\_\allowbreak na\_\allowbreak hora} & Conta desativada não acessa mais nada & \ok \\
+  \bottomrule
+\end{xltabular}
+
+\textbf{Observação:} os fluxos de ficha e de registro de execução ainda não têm testes automatizados
+próprios; foram cobertos pelos testes manuais abaixo e entram nos próximos passos (seção~\ref{sec:proximos}).
+
+\evidencia{s05_testes_pytest.png}{Execução da suíte de testes (\cod{python -m pytest}).}{fig:pytest5}
+
+\subsection{Testes manuais (casos de teste)}
+
+\begin{xltabular}{\textwidth}{c Y Y c}
+  \toprule
+  \textbf{\#} & \textbf{Caso} & \textbf{Resultado esperado} & \textbf{Resultado} \\
+  \midrule
+  \endhead
+  T1  & Cadastrar exercício com nome novo                       & 201; aparece no catálogo                       & \preencher{ok/falhou} \\
+  T2  & Cadastrar exercício com nome repetido                   & 409 ``Já existe um exercício com este nome.''  & \preencher{} \\
+  T3  & Criar ficha com 3 exercícios                            & Ficha na lista com itens em ordem              & \preencher{} \\
+  T4  & Criar ficha sem exercício                               & Recusada (mínimo de 1)                          & \preencher{} \\
+  T5  & Criar ficha com séries = 0 ou repetições = 0            & Recusada com mensagem de campo                  & \preencher{} \\
+  T6  & Reordenar itens e salvar                                & Nova ordem persiste após recarregar             & \preencher{} \\
+  T7  & Arquivar a ficha                                        & Some para o aluno; continua para a equipe       & \preencher{} \\
+  T8  & Reativar a ficha                                        & Volta a aparecer para o aluno                   & \preencher{} \\
+  T9  & Aluno registra treino de hoje                           & 201; aparece no histórico                       & \preencher{} \\
+  T10 & Aluno registra treino de ficha de outro aluno           & 404 ``Treino não encontrado.''                  & \preencher{} \\
+  T11 & Registro com exercício inexistente                      & 404 e nada gravado                              & \preencher{} \\
+  T12 & Evolução após 2 registros do mesmo exercício            & Duas observações, volume calculado              & \preencher{} \\
+  T13 & Aluno exclui o próprio registro                         & 204; sai do histórico e da evolução             & \preencher{} \\
+  T14 & Aluno tenta excluir registro de outro aluno             & 404 ``Registro não encontrado.''                & \preencher{} \\
+  T15 & Aluno acessa \cod{/exercicios}                          & 403                                             & \preencher{} \\
+  T16 & Reiniciar backend e frontend                            & Fichas e histórico preservados                  & \preencher{} \\
+  \bottomrule
+\end{xltabular}
+
+% =============================================================
+\section{Bugs encontrados e correções}\label{sec:bugs}
+
+Problemas identificados e corrigidos ao longo do desenvolvimento que afetam o funcionamento do módulo, com a
+correção correspondente no repositório:
+
+\begin{xltabular}{\textwidth}{c Y Y c}
+  \toprule
+  \textbf{\#} & \textbf{Problema} & \textbf{Correção} & \textbf{Situação} \\
+  \midrule
+  \endhead
+  B1 & Horários de check-in/saída com fuso errado & Colunas \cod{timestamptz} e exibição em \cod{America/Sao\_Paulo} (migração \cod{002}) & \ok \\
+  B2 & Aluno podia ficar com duas matrículas ativas & Índice único no banco e validação na API (migração \cod{006}) & \ok \\
+  B3 & Aluno quitava a própria mensalidade sem conferência & Fluxo ``informar $\rightarrow$ confirmar/recusar'' (migração \cod{005}) & \ok \\
+  B4 & Mensagens de validação em inglês na tela & Tradução em \cod{mensagemErro()} no frontend & \ok \\
+  B5 & \preencher{Bug encontrado nos testes T1--T16} & \preencher{correção} & \preencher{} \\
+  B6 & \preencher{Bug encontrado nos testes T1--T16} & \preencher{correção} & \preencher{} \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Pendências}
+
+\begin{itemize}
+  \item Não há exclusão de exercício (apenas edição); decidir se o catálogo terá exclusão ou inativação.
+  \item Testes automatizados dedicados a fichas e sessões (seção~\ref{sec:testes}).
+  \item \preencher{Outras pendências levantadas pela equipe.}
+\end{itemize}
+
+% =============================================================
+\section{Repositório GitHub}\label{sec:repo}
+
+Repositório: \url{https://github.com/Lour3nco/unifit} (branch \cod{main}).
+
+\begin{center}
+\small
+\begin{tabular}{l l l l}
+  \toprule
+  \textbf{Commit} & \textbf{Data} & \textbf{Autor} & \textbf{Mensagem} \\
+  \midrule
+  \cod{5cc30cb} & 14/10/2026 & Lour3nco & Versão 1.0 \\
+  \cod{e71829d} & 15/10/2026 & Lour3nco & Atualização do repositório \\
+  \cod{47bf9af} & 20/10/2026 & Lucas Lourenço & Update README.md \\
+  \cod{f261af7} & 20/10/2026 & Lour3nco & UniFit V1.0.0 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\evidencia{github_commits.png}{Histórico de commits do repositório no GitHub.}{fig:github5}
+
+\preencher{Atualize esta tabela com os commits mais recentes antes de gerar o PDF final.}
+
+% =============================================================
+\section{Ajustes em relação às Sprints anteriores}
+
+As alterações de modelagem ficam nas migrações \cod{banco/00N\_*.sql}; a \cod{003} (registros de treino)
+sustenta este módulo e a \cod{006} acrescentou índices de consistência.
+
+\preencher{Registre aqui qualquer ajuste de planejamento, arquitetura ou modelagem feito em relação às
+Sprints anteriores, com a justificativa.}
+
+% =============================================================
+\section{Dificuldades encontradas e próximos passos}\label{sec:proximos}
+
+\subsection{Dificuldades}
+
+\begin{itemize}
+  \item \textbf{Consistência ficha/itens/sessões:} editar a ficha regrava os itens; foi preciso fazer tudo na
+        mesma transação para não deixar ficha sem exercícios.
+  \item \textbf{Permissão por dono do dado:} o aluno só pode ver, registrar e apagar o que é dele; as rotas
+        \cod{/meu/*} validam o dono e respondem 404 para não revelar a existência do registro alheio.
+  \item \textbf{Evolução:} definir o que mostrar quando faltam carga, séries ou repetições (volume só quando
+        os três existem).
+  \item \preencher{Acrescente aqui as dificuldades reais da equipe (organização, prazos, ferramentas).}
+\end{itemize}
+
+\subsection{Próximos passos}
+
+\begin{enumerate}
+  \item Escrever testes automatizados para fichas, execuções e evolução.
+  \item Integrar a \textbf{análise de postura} (IA) ao registro de execução, associando o vídeo ao exercício da sessão.
+  \item Gráficos de evolução e exportação de relatórios (PDF/CSV).
+  \item Organizar os commits por funcionalidade, com mensagens descritivas.
+\end{enumerate}
+
+\vfill
+\begin{center}\small\itshape
+ UniFit --- Sprint 05.
+\end{center}
+
+\end{document}

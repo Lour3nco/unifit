@@ -11,7 +11,7 @@ from ..database import get_db
 from ..deps import exige_perfis
 from ..reflexao import tabela
 from ..schemas import BaixaIn
-from ..services.academia import EM_ABERTO, FORMAS, hoje, quitar, recusar_informe, utc
+from ..services.academia import EM_ABERTO, FORMAS, hoje, quitar, reabrir_pagamento, recusar_informe, utc
 
 router = APIRouter(prefix="/pagamentos", tags=["financeiro"],
                    dependencies=[Depends(exige_perfis("administrador", "recepcao"))])
@@ -64,6 +64,13 @@ def recusar(pagamento_id: int, db: Session = Depends(get_db)):
     """O aluno informou o pagamento, mas ele não foi encontrado: a mensalidade volta a ser cobrança normal."""
     recusar_informe(db, pagamento_id)
     return {"mensagem": "Pagamento informado recusado. A mensalidade continua em aberto."}
+
+
+@router.post("/{pagamento_id}/reabrir")
+def reabrir(pagamento_id: int, db: Session = Depends(get_db)):
+    """Desfaz baixa ou cancelamento feito por engano (recepção e administrador)."""
+    novo = reabrir_pagamento(db, pagamento_id)
+    return {"mensagem": f"Mensalidade reaberta ({'em atraso' if novo == 'atrasado' else 'pendente'})."}
 
 
 @router.post("/{pagamento_id}/cancelar")

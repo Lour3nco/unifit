@@ -112,12 +112,33 @@ def _media_lados(m: dict, art: str):
     return round(sum(vals) / len(vals), 1) if vals else None
 
 
-def _suavizar(serie: list) -> list:
+def _suavizar(serie: list, janela: int = 5) -> list:
+    """Filtro de MEDIANA (não média): remove picos de 1-2 quadros do rastreamento (ex.: um quadro onde
+    o modelo troca os braços ou perde um ponto) sem arredondar o movimento real. Essencial porque a
+    detecção de pose oscila bastante quadro a quadro."""
+    h = janela // 2
     saida = []
     for i, v in enumerate(serie):
-        viz = [x for x in serie[max(0, i - 1):i + 2] if x is not None]
-        saida.append(sum(viz) / len(viz) if v is not None and viz else None)
+        viz = sorted(x for x in serie[max(0, i - h):i + h + 1] if x is not None)
+        saida.append(viz[len(viz) // 2] if v is not None and viz else None)
     return saida
+
+
+def _instavel(serie_bruta: list, reps: int) -> bool:
+    """True quando o sinal da articulação principal oscila muito mais do que as repetições explicam —
+    sinal de rastreamento ruim (ângulo/iluminação/pessoa deitada). Nesse caso não dá para julgar
+    assimetria ou consistência de repetições com confiança, então esses alertas são suprimidos.
+    Num sinal limpo, variação total ≈ 2·reps·amplitude e inversões de direção ≈ 2·reps."""
+    d = [serie_bruta[i + 1] - serie_bruta[i] for i in range(len(serie_bruta) - 1)
+         if serie_bruta[i] is not None and serie_bruta[i + 1] is not None]
+    vals = [v for v in serie_bruta if v is not None]
+    if len(vals) < 4 or not d:
+        return True
+    amplitude = max(vals) - min(vals)
+    variacao_total = sum(abs(x) for x in d)
+    inversoes = sum(1 for i in range(len(d) - 1) if d[i] * d[i + 1] < 0)
+    base = max(reps, 1)
+    return (amplitude > 0 and variacao_total / amplitude > 4 * base) or inversoes > 4 * base
 
 
 def _repeticoes(serie: list) -> int:
@@ -136,6 +157,29 @@ def _repeticoes(serie: list) -> int:
         elif v >= alto:
             if estado == "baixo":
                 reps += 1
+            estado = "alto"
+    return reps
+
+
+def _segmentos_reps(serie: list) -> list:
+    """Divide a série da articulação principal em repetições (ciclo alto→baixo→alto), devolvendo
+    (fundo, topo) de cada rep — usado para achar repetições parciais ou desiguais."""
+    vals = [v for v in serie if v is not None]
+    if len(vals) < 4 or max(vals) - min(vals) < 30:
+        return []
+    lo, hi = min(vals), max(vals)
+    nivel_baixo, nivel_alto = lo + (hi - lo) * 0.35, hi - (hi - lo) * 0.35
+    reps, estado, fundo = [], None, None
+    for v in serie:
+        if v is None:
+            continue
+        if v <= nivel_baixo:
+            estado = "baixo"
+            fundo = v if fundo is None else min(fundo, v)
+        elif v >= nivel_alto:
+            if estado == "baixo" and fundo is not None:
+                reps.append((fundo, v))  # fechou uma rep: desceu até o fundo e voltou ao topo
+                fundo = None
             estado = "alto"
     return reps
 
@@ -159,19 +203,55 @@ def _resumo(valores: list) -> dict | None:
             "cobertura": round(len(vals) / len(valores), 2)}
 
 
-def _alertas(principal: str, resumo: dict, pct_pessoa: float) -> list:
+def _alertas(principal: str, resumo: dict, pct_pessoa: float, sinal: list, instavel: bool) -> list:
     alertas = []
+    superior = principal == "cotovelo"  # supino, rosca, remada, desenvolvimento… (membro superior)
     if pct_pessoa < 0.5:
         alertas.append(f"Pessoa detectada em só {pct_pessoa:.0%} dos quadros. Filme de lado, com o corpo inteiro "
                        "no enquadramento e boa iluminação.")
+    if instavel:
+        # rastreamento ruim: não dá para avaliar execução. Avisa e não arrisca falsos positivos.
+        alertas.append("Rastreamento instável: a detecção do corpo oscilou muito neste vídeo (provável ângulo, "
+                       "enquadramento ou iluminação). Filme de lado, com o corpo inteiro no quadro e boa luz, "
+                       "para uma avaliação de execução confiável.")
+        return alertas
     p = resumo.get(principal)
+    esq, dir_ = resumo.get(f"{principal}_esq"), resumo.get(f"{principal}_dir")
+    bons_lados = bool(esq and dir_ and min(esq["cobertura"], dir_["cobertura"]) >= 0.6)
+
+    # não completa a flexão (desce pouco)
     if p and p["amplitude"] >= 30 and p["min"] > 100:
         alertas.append(f"Amplitude curta: o {principal} flexionou só até {p['min']:.0f}°. "
                        "Para a amplitude completa, o esperado é chegar perto de 90° ou menos.")
-    esq, dir_ = resumo.get(f"{principal}_esq"), resumo.get(f"{principal}_dir")
-    if esq and dir_ and min(esq["cobertura"], dir_["cobertura"]) >= 0.7 and abs(esq["min"] - dir_["min"]) > 15:
+
+    # membro superior: não estende os braços no topo do movimento
+    if superior and p and p["max"] < 150:
+        alertas.append(f"Extensão incompleta no topo: o cotovelo chegou só a {p['max']:.0f}° "
+                       "(o ideal é estender perto de 170°, travando o movimento no fim).")
+
+    # assimetria no ponto mais baixo (fundo do movimento)
+    if bons_lados and abs(esq["min"] - dir_["min"]) > 15:
         alertas.append(f"Diferença de {abs(esq['min'] - dir_['min']):.0f}° entre os lados no {principal} "
-                       "(esquerdo x direito): confira se a carga está equilibrada.")
+                       "(no ponto mais baixo): confira se a carga está equilibrada.")
+    # assimetria na extensão: um lado estende menos que o outro no topo
+    if bons_lados and abs(esq["max"] - dir_["max"]) > 15:
+        lado = "esquerdo" if esq["max"] < dir_["max"] else "direito"
+        alertas.append(f"Assimetria na extensão: o lado {lado} estende {abs(esq['max'] - dir_['max']):.0f}° "
+                       "a menos que o outro no topo — um braço “fica para trás”.")
+
+    # repetições parciais ou desiguais entre si
+    reps = _segmentos_reps(sinal)
+    if len(reps) >= 2:
+        fundos = [f for f, _ in reps]
+        amplitudes = [t - f for f, t in reps]
+        if max(fundos) - min(fundos) > 25:
+            alertas.append(f"Repetições desiguais: a profundidade variou {max(fundos) - min(fundos):.0f}° "
+                           "entre as repetições — procure manter a mesma amplitude em todas.")
+        if amplitudes and min(amplitudes) < 0.6 * max(amplitudes):
+            alertas.append("Houve repetição parcial: pelo menos uma teve amplitude bem menor que as outras. "
+                           "Faça o movimento completo em todas.")
+
+    # tronco à frente (exercícios de perna)
     tronco = resumo.get("tronco")
     if principal == "joelho" and tronco and tronco["max"] > 50:
         alertas.append(f"Tronco muito inclinado à frente (até {tronco['max']:.0f}°): mantenha o peito aberto "
@@ -210,13 +290,17 @@ def analisar(caminho: str, exercicio: str, grupo: str | None) -> dict:
 
     medidas = [_medidas(d) for d in deteccoes]
     nomes = list(ANGULOS) + ["tronco"]
-    resumo = {n: r for n in nomes if (r := _resumo([m.get(n) for m in medidas]))}
+    # resumo a partir de séries suavizadas por mediana: min/max deixam de ser picos de 1 quadro
+    resumo = {n: r for n in nomes if (r := _resumo(_suavizar([m.get(n) for m in medidas])))}
     for art in ARTICULACOES:
-        if r := _resumo([_media_lados(m, art) for m in medidas]):
+        if r := _resumo(_suavizar([_media_lados(m, art) for m in medidas])):
             resumo[art] = r
 
     principal = _principal(exercicio, grupo, resumo)
-    sinal = _suavizar([_media_lados(m, principal) for m in medidas])
+    principal_bruto = [_media_lados(m, principal) for m in medidas]
+    sinal = _suavizar(principal_bruto)
+    reps = _repeticoes(sinal)
+    instavel = _instavel(principal_bruto, reps)  # rastreamento ruim desliga os alertas finos
     validos = [i for i, v in enumerate(sinal) if v is not None]
     pior = min(validos, key=lambda i: sinal[i]) if validos else None
     pct_pessoa = sum(d is not None for d in deteccoes) / len(deteccoes)
@@ -232,11 +316,12 @@ def analisar(caminho: str, exercicio: str, grupo: str | None) -> dict:
             "quadros_com_pessoa": sum(d is not None for d in deteccoes),
             "tempo_ia_seg": round(tempo_ia, 2),
             "articulacao_principal": principal,
-            "repeticoes": _repeticoes(sinal),
+            "repeticoes": reps,
+            "rastreamento_estavel": not instavel,
             "resumo": resumo,
             "serie": [{"t": round(t, 2), **{a: _media_lados(m, a) for a in ARTICULACOES}, "tronco": m.get("tronco")}
                       for t, m in zip(tempos, medidas)],
-            "alertas": _alertas(principal, resumo, pct_pessoa),
+            "alertas": _alertas(principal, resumo, pct_pessoa, sinal, instavel),
             "imagem": _imagem(quadros[pior], deteccoes[pior], medidas[pior], principal) if pior is not None else None,
         },
     }

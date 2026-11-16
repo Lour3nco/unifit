@@ -44,6 +44,28 @@ def registrar_falha(email: str, ip: str) -> None:
         _falhas[f"ip:{ip}"].append(agora)
 
 
+MAX_ENVIOS_POR_DESTINO = 3   # links de "esqueci a senha" para o mesmo e-mail/telefone em 15 min
+MAX_ENVIOS_POR_IP = 10       # contra quem usa a rota para disparar e-mail/SMS em massa
+_envios: dict[str, deque] = defaultdict(deque)
+
+
+def envio_permitido(destino: str, ip: str) -> bool:
+    """Conta um pedido de link de troca de senha; False se o destino ou o IP passou do limite."""
+    agora = time.monotonic()
+    with _trava:
+        filas = []
+        for chave, maximo in ((f"destino:{destino}", MAX_ENVIOS_POR_DESTINO), (f"ip:{ip}", MAX_ENVIOS_POR_IP)):
+            fila = _envios[chave]
+            while fila and fila[0] <= agora - JANELA_SEG:
+                fila.popleft()
+            if len(fila) >= maximo:
+                return False
+            filas.append(fila)
+        for fila in filas:
+            fila.append(agora)
+    return True
+
+
 def registrar_sucesso(email: str) -> None:
     """Login certo zera as falhas daquele e-mail (as do IP continuam valendo)."""
     with _trava:

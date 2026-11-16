@@ -92,25 +92,43 @@ def mensalidades_em_atraso(db: Session, aluno_id) -> int:
         pag.c.informado_em.is_(None))) or 0
 
 
-def registrar_entrada(db: Session, aluno_id, pelo_app: bool = False) -> str | None:
-    """Só entra quem tem plano valendo hoje. Mensalidade em atraso: pelo app bloqueia; no balcão entra,
-    mas devolve um aviso para a recepção decidir/cobrar."""
-    if checkin_aberto(db, aluno_id):
-        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um check-in aberto. Faça o check-out antes.")
+def exige_acesso(db: Session, aluno_id, pelo_app: bool = True, checar_atraso: bool = True) -> str | None:
+    """Regra única de acesso (check-in, aulas, treinos): plano valendo hoje (ativa, não trancada/cancelada,
+    dentro do período). Mensalidade em atraso: pelo app bloqueia; pela equipe passa, mas devolve um aviso
+    para a recepção decidir/cobrar. checar_atraso=False só exige o plano."""
     mat, dia = tabela("matriculas"), hoje()
     plano = db.execute(select(mat.c.id).where(
         mat.c.aluno_id == aluno_id, mat.c.status == "ativa", mat.c.data_inicio <= dia,
         or_(mat.c.data_fim.is_(None), mat.c.data_fim >= dia)).limit(1)).first()
     if not plano:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sem plano ativo: renove o plano para fazer check-in."
-                            if pelo_app else "Este aluno não tem plano ativo. Faça uma nova matrícula antes do check-in.")
-    aviso = None
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sem plano ativo: renove o plano para usar esta função."
+                            if pelo_app else "Este aluno não tem plano ativo. Faça uma nova matrícula antes.")
+    if not checar_atraso:
+        return None
+    # cobrança do período atual cancelada: o plano segue "ativo", mas nada foi pago por ele (antes liberava
+    # o período de graça). Conta como pendência, igual ao atraso.
+    pag = tabela("pagamentos")
+    ultima = db.scalar(select(pag.c.status).where(pag.c.matricula_id == plano.id)
+                       .order_by(pag.c.data_vencimento.desc(), pag.c.id.desc()).limit(1))
+    cancelada = ultima is not None and str(ultima) == "cancelado"
     atrasos = mensalidades_em_atraso(db, aluno_id)
-    if atrasos:
-        if pelo_app:
-            raise HTTPException(status.HTTP_403_FORBIDDEN,
-                                "Você tem mensalidade em atraso. Procure a recepção para liberar o check-in.")
-        aviso = f"{atrasos} mensalidade(s) em atraso. Cobre o aluno."
+    if not (atrasos or cancelada):
+        return None
+    if pelo_app:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Você tem mensalidade em atraso. Pague ou procure a recepção "
+                            "para liberar." if atrasos else "Sua mensalidade atual foi cancelada. Procure a recepção "
+                            "para regularizar.")
+    avisos = [f"{atrasos} mensalidade(s) em atraso. Cobre o aluno."] if atrasos else []
+    if cancelada:
+        avisos.append("A mensalidade atual está cancelada: reabra a cobrança no Financeiro.")
+    return " ".join(avisos)
+
+
+def registrar_entrada(db: Session, aluno_id, pelo_app: bool = False) -> str | None:
+    """Check-in na academia, com a regra de exige_acesso. Devolve o aviso de atraso (só no balcão)."""
+    if checkin_aberto(db, aluno_id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um check-in aberto. Faça o check-out antes.")
+    aviso = exige_acesso(db, aluno_id, pelo_app)
     db.execute(insert(tabela("checkins")).values(aluno_id=aluno_id))  # data_hora = now() no banco
     db.commit()
     return aviso
@@ -247,6 +265,24 @@ def informar_pagamento(db: Session, pagamento_id, forma: str, aluno_id):
         raise HTTPException(status.HTTP_409_CONFLICT, "Você já informou este pagamento. Aguarde a confirmação da recepção.")
     db.execute(update(pag).where(pag.c.id == pagamento_id).values(informado_em=func.now(), informado_forma=FORMAS[forma]))
     db.commit()
+
+
+def reabrir_pagamento(db: Session, pagamento_id) -> str:
+    """Desfaz uma baixa ou um cancelamento feito por engano: a mensalidade volta a ficar em aberto
+    (pendente, ou atrasada se o vencimento já passou), sem forma/data de pagamento nem informe do aluno.
+    Devolve o novo status."""
+    pag = tabela("pagamentos")
+    linha = db.execute(select(pag.c.status, pag.c.data_vencimento).where(pag.c.id == pagamento_id)).first()
+    if not linha:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Pagamento não encontrado.")
+    novo = "atrasado" if linha.data_vencimento < hoje() else "pendente"
+    # o WHERE no status evita reabrir duas vezes com dois cliques ao mesmo tempo
+    n = db.execute(update(pag).where(pag.c.id == pagamento_id, pag.c.status.in_(("pago", "cancelado"))).values(
+        status=novo, data_pagamento=None, forma_pagamento=None, informado_em=None, informado_forma=None)).rowcount
+    if not n:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Só é possível reabrir mensalidades pagas ou canceladas.")
+    db.commit()
+    return novo
 
 
 def recusar_informe(db: Session, pagamento_id):

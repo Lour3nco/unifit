@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from .config import CORS_ORIGINS
 from .database import DB_SCHEMA, get_db
-from .routers import (aluno, auth, chaves, dashboard, financeiro, gestao_alunos, planos, postura, recepcao,
+from .routers import (aluno, auth, aulas, chaves, dashboard, financeiro, gestao_alunos, planos, postura, recepcao,
                       relatorios, treinos, usuarios)
 from .services import rotinas
 
@@ -36,7 +36,7 @@ app.include_router(auth.router)
 app.include_router(usuarios.router)
 app.include_router(aluno.router)
 app.include_router(dashboard.router)
-for r in (gestao_alunos, planos, financeiro, recepcao, treinos, postura, relatorios, chaves):
+for r in (gestao_alunos, planos, financeiro, recepcao, treinos, postura, relatorios, chaves, aulas):
     app.include_router(r.router)
 
 

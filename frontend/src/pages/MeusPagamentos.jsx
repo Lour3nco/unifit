@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import api, { mensagemErro } from "../api";
 
 const FORMAS = [["pix", "Pix"], ["cartao", "Cartão de crédito"], ["boleto", "Boleto"]];
@@ -9,10 +10,13 @@ const moeda = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", curr
 const hojeISO = () => new Date().toLocaleDateString("sv-SE"); // AAAA-MM-DD no fuso local
 
 export default function MeusPagamentos() {
+  const { pathname, state } = useLocation();
+  const navegar = useNavigate();
+  const [primeiroPagamento] = useState(Boolean(state?.mensagem)); // veio de EscolherPlano
   const [r, setR] = useState(null);
   const [planos, setPlanos] = useState([]);
   const [erro, setErro] = useState("");
-  const [ok, setOk] = useState("");
+  const [ok, setOk] = useState(state?.mensagem || "");
   const [pagando, setPagando] = useState(null); // id do pagamento com a escolha de forma aberta
   const [forma, setForma] = useState("pix");
   const [enviando, setEnviando] = useState(false);
@@ -21,7 +25,16 @@ export default function MeusPagamentos() {
     Promise.all([api.get("/meu/resumo"), api.get("/meu/planos")])
       .then(([a, b]) => { setR(a.data); setPlanos(b.data); })
       .catch((e) => setErro(mensagemErro(e)));
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => {
+    carregar();
+    if (primeiroPagamento) navegar(pathname, { replace: true, state: null }); // recarregar a página não repete o aviso
+  }, []);
+  // recém-contratado: já abre a escolha de forma na mensalidade em aberto
+  useEffect(() => {
+    if (!primeiroPagamento || !r) return;
+    const aberta = r.pagamentos.find((p) => p.status === "pendente" && !p.informado_em);
+    if (aberta) setPagando(aberta.id);
+  }, [primeiroPagamento, r?.pagamentos?.length]);
 
   async function executar(fn) {
     setErro(""); setOk("");
@@ -53,6 +66,11 @@ export default function MeusPagamentos() {
       <div className="err" role="alert">{erro}</div>
       {ok && <div className="okmsg" role="status" style={{ marginBottom: 14 }}>{ok}</div>}
 
+      {vigente && r.pagamentos[0]?.status === "cancelado" && (
+        <div className="err" role="alert" style={{ marginBottom: 14 }}>
+          Sua mensalidade atual foi cancelada e o acesso ao check-in e às aulas está bloqueado. Procure a recepção para regularizar.
+        </div>
+      )}
       {vigente ? (
         <div className="kpis">
           <div className="kpi"><small>Plano</small><strong>{m.plano}</strong></div>

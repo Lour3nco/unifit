@@ -23,6 +23,9 @@ def verificar_senha(senha: str, hash_: str) -> bool:
         return False
 
 
+HASH_FICTICIO = hash_senha("conta-inexistente")  # comparado no login quando o e-mail não existe
+
+
 def criar_token(usuario_id: int, perfil: str) -> str:  # RNF02
     exp = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
     return jwt.encode({"sub": str(usuario_id), "perfil": perfil, "exp": exp}, JWT_SECRET, algorithm=ALGORITHM)

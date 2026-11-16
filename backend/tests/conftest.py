@@ -15,7 +15,8 @@ import pytest
 
 SCHEMA = f"unifit_teste_{uuid.uuid4().hex[:8]}"
 BANCO = Path(__file__).resolve().parent.parent / "banco"
-MIGRACOES_DEPOIS_DO_SCHEMA = ("005_pagamento_informado.sql", "006_indices_matricula_postura.sql")
+MIGRACOES_DEPOIS_DO_SCHEMA = ("005_pagamento_informado.sql", "006_indices_matricula_postura.sql",
+                              "009_recuperacao_senha.sql")
 
 # precisa acontecer ANTES de importar o app: database.py e perfis.py leem isso na importação
 os.environ["DB_SCHEMA"] = SCHEMA
@@ -62,6 +63,7 @@ def banco_limpo():
         tabelas = conn.execute(text("select tablename from pg_tables where schemaname = :s"), {"s": SCHEMA}).scalars()
         conn.exec_driver_sql("TRUNCATE " + ", ".join(f'"{SCHEMA}"."{t}"' for t in tabelas) + " RESTART IDENTITY CASCADE")
     limite._falhas.clear()
+    limite._envios.clear()
     yield
 
 

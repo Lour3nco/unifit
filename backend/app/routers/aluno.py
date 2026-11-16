@@ -1,6 +1,6 @@
 """Área do aluno. RN04: o aluno só enxerga os próprios dados (tudo parte do usuário logado)."""
 # pyright: reportMissingImports=false
-from datetime import timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
@@ -11,9 +11,10 @@ from ..database import get_db
 from ..deps import exige_perfis
 from ..models import Usuario
 from ..reflexao import tabela
-from ..schemas import AssinarPlanoIn, DadosAlunoIn, PagarIn, SessaoIn
-from ..services.academia import (FORMAS, checkin_aberto, criar_matricula, informar_pagamento, planos_ativos,
-                                 registrar_entrada, registrar_saida, salvar_aluno, utc)
+from ..schemas import AssinarPlanoIn, DadosAlunoIn, PagarIn, ReservaIn, SessaoIn
+from ..services import aulas as aulas_svc
+from ..services.academia import (FORMAS, checkin_aberto, criar_matricula, exige_acesso, informar_pagamento,
+                                 planos_ativos, registrar_entrada, registrar_saida, salvar_aluno, utc)
 from ..services.alunos import aluno_do_usuario
 from ..services.registros import evolucao_do_aluno, excluir_sessao, registrar_sessao, sessoes_do_aluno
 
@@ -112,6 +113,8 @@ def minha_evolucao(db: Session = Depends(get_db), usuario: Usuario = Depends(so_
 def registrar_meu_treino(treino_id: int, dados: SessaoIn, db: Session = Depends(get_db),
                          usuario: Usuario = Depends(so_aluno)):
     aluno_id = _aluno(db, usuario)["id"]
+    # treino exige plano valendo, mas não bloqueia por atraso: a recepção deixa o inadimplente entrar
+    exige_acesso(db, aluno_id, checar_atraso=False)
     registrar_sessao(db, treino_id, dados, usuario.id, aluno_id=aluno_id)
     return jsonable_encoder(sessoes_do_aluno(db, aluno_id))
 
@@ -119,6 +122,34 @@ def registrar_meu_treino(treino_id: int, dados: SessaoIn, db: Session = Depends(
 @router.delete("/sessoes/{sessao_id}", status_code=status.HTTP_204_NO_CONTENT)
 def apagar_minha_sessao(sessao_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
     excluir_sessao(db, sessao_id, aluno_id=_aluno(db, usuario)["id"])
+
+
+# ---- Aulas & Agenda do aluno: ver a grade, reservar vaga e fazer check-in ----
+
+@router.get("/aulas/semana")
+def minha_semana(data: date | None = None, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    return jsonable_encoder(aulas_svc.semana(db, data or date.today(), aluno_id=_aluno(db, usuario)["id"]))
+
+
+@router.get("/aulas/frequencia")
+def minha_frequencia(db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    return jsonable_encoder(aulas_svc.frequencia_aluno(db, _aluno(db, usuario)["id"]))
+
+
+@router.post("/aulas/{aula_id}/reservar", status_code=status.HTTP_201_CREATED)
+def reservar_aula(aula_id: int, dados: ReservaIn, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    return jsonable_encoder(aulas_svc.reservar(db, aula_id, dados.data, _aluno(db, usuario)["id"]))
+
+
+@router.delete("/reservas/{reserva_id}", status_code=status.HTTP_204_NO_CONTENT)
+def cancelar_minha_reserva(reserva_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    aulas_svc.cancelar(db, reserva_id, aluno_id=_aluno(db, usuario)["id"])
+
+
+@router.post("/reservas/{reserva_id}/checkin")
+def checkin_aula(reserva_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(so_aluno)):
+    aulas_svc.marcar_presenca(db, reserva_id, True, aluno_id=_aluno(db, usuario)["id"])
+    return {"ok": True}
 
 # ---- Ações do aluno: editar dados, check-in/check-out e informar pagamentos ----
 

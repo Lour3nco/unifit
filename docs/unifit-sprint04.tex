@@ -1,0 +1,496 @@
+% =============================================================
+%  Documentação de Sprint — UniFit — Sprint 04
+%  "Primeiro módulo completo"
+%  Compilar com pdflatex (2x para o sumário). Funciona no Overleaf.
+%  Evidências: coloque os prints em imagens/sprint04/ (ou em imagens/)
+%  com os nomes indicados em cada \evidencia{...}; enquanto faltarem,
+%  aparece uma caixa cinza no lugar. No PDF final, una as Sprints
+%  anteriores antes deste documento (exigência do Teams).
+% =============================================================
+\documentclass[11pt,a4paper,final]{article}
+
+% ---------- Idioma e codificação ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath}
+
+% ---------- Layout ----------
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% ---------- Tabelas, cores, símbolos ----------
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xltabular}
+\usepackage[table]{xcolor}
+\usepackage{pifont}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,arrows.meta,shapes.geometric,backgrounds}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[font=small]{caption}
+\graphicspath{{imagens/}{imagens/sprint04/}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Paleta ----------
+\definecolor{azul}{HTML}{2B50AA}
+\definecolor{cinza}{HTML}{F2F2F2}
+\definecolor{verde}{HTML}{2E7D32}
+\definecolor{codbg}{HTML}{F6F8FA}
+
+\titleformat{\section}{\Large\bfseries\color{azul}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{azul}}{\thesubsection}{0.6em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small UniFit — Documentação de Sprint}
+\rhead{\small Sprint 04}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---------- Comandos auxiliares ----------
+\newcommand{\ok}{\textcolor{verde}{\ding{51}}}
+\newcommand{\nao}{---}
+\newcommand{\cod}[1]{\texttt{#1}}
+\newcommand{\preencher}[1]{\textit{\textcolor{gray}{#1}}}
+\renewcommand{\arraystretch}{1.25}
+
+% tamanho máximo dos prints: cabem na largura do texto e ocupam no máximo ~1/3 da página
+\newlength{\evidW}\newlength{\evidH}
+\AtBeginDocument{\setlength{\evidW}{0.82\textwidth}\setlength{\evidH}{0.32\textheight}}
+\setlength{\fboxsep}{1pt}
+\captionsetup{font=small,skip=4pt}
+
+% \evidencia{arquivo}{legenda}{rótulo}: usa o print se existir; senão mostra caixa de aviso
+\newcommand{\evidencia}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{imagens/sprint04/#1}{%
+      \fbox{\includegraphics[width=\evidW,height=\evidH,keepaspectratio]{imagens/sprint04/#1}}%
+    }{\IfFileExists{imagens/#1}{%
+      \fbox{\includegraphics[width=\evidW,height=\evidH,keepaspectratio]{imagens/#1}}%
+    }{%
+      \fcolorbox{gray!60}{cinza}{\parbox[c][2.4cm][c]{0.8\textwidth}{\centering
+        \preencher{Inserir print: \texttt{imagens/sprint04/\detokenize{#1}}}}}%
+    }}
+    \caption{#2}\label{#3}
+  \end{figure}}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codbg},
+  frame=single, rulecolor=\color{gray!40},
+  breaklines=true, columns=fullflexible,
+  keepspaces=true, showstringspaces=false,
+  xleftmargin=4pt, xrightmargin=4pt,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1 {ê}{{\^e}}1 {º}{{\textordmasculine}}1
+}
+
+% =============================================================
+\begin{document}
+
+% ---------- Capa ----------
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries\color{azul} UniFit\par}
+  \vspace{0.6cm}
+  {\LARGE Documentação de Sprint\par}
+  \vspace{0.3cm}
+  {\Large Sprint 04 --- Primeiro módulo completo\par}
+  \vspace{1.2cm}
+  {\large Sistema de gestão de academia com previsão de evasão\\
+  e análise de postura por vídeo\par}
+  \vspace{0.8cm}
+  {\small\textbf{Stack:} React + Vite $\cdot$ FastAPI $\cdot$ PostgreSQL (Supabase) $\cdot$ PyTorch\par}
+  \vfill
+  \begin{tabular}{>{\bfseries}l l}
+    \toprule
+    Instituição / Curso & \textbf{UNINASSAU - RECIFE / CIEN. DA COMPUTAÇÃO} \\
+    Disciplina          & \textbf{FABRICA DE SOFTWARE} \\
+    Grupo               & \preencher{Nº do grupo} --- \textbf{UniFit} \\
+    Equipe              & \textbf{Lucas Lourenço, Amhos Cezar, Carlos Guilherme, Vitor Lima} \\
+    Scrum Master        & \preencher{Nome do líder} \\
+    Entrega             & \textbf{Sprint 04 --- data-limite: 26/09} \\
+    Repositório         & \cod{github.com/Lour3nco/unifit} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{1.5cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================
+\section{Escopo da Sprint}
+
+A Sprint 04 consolida a base entregue na Sprint 03 (banco conectado, login, cadastro, perfis e CRUD de
+alunos) em um \textbf{primeiro módulo completo, integrado e utilizável}: o módulo de
+\textbf{Gestão de Alunos, Planos, Matrículas e Financeiro}, usado pela recepção e pelo administrador.
+
+\subsection{Checklist das entregas obrigatórias}
+
+\begin{xltabular}{\textwidth}{l Y R{4.4cm} c}
+  \toprule
+  \textbf{\#} & \textbf{Entrega} & \textbf{Onde está} & \textbf{Status} \\
+  \midrule
+  \endhead
+  1 & Primeiro módulo totalmente funcional & Seções~\ref{sec:modulo} e~\ref{sec:fluxo} & \ok \\
+  2 & Persistência de dados                & Seção~\ref{sec:persistencia}  & \ok \\
+  3 & Validações                           & Seção~\ref{sec:validacoes}    & \ok \\
+  4 & Mensagens de erro                    & Seção~\ref{sec:erros}         & \ok \\
+  5 & Navegação entre telas                & Seção~\ref{sec:navegacao}     & \ok \\
+  6 & Commits organizados                  & Seção~\ref{sec:commits}       & \preencher{ver seção} \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Definição de pronto (DoD)}
+
+Um item foi considerado concluído quando: a rota da API responde e está documentada no Swagger
+(\cod{/docs}), a tela correspondente consome a rota, os dados persistem no PostgreSQL, as validações e as
+mensagens de erro foram exercitadas, o controle de acesso por perfil é respeitado e a regra de negócio foi
+validada manualmente e por teste automatizado.
+
+% =============================================================
+\section{Módulo implementado}\label{sec:modulo}
+
+\textbf{Módulo de Gestão de Alunos, Planos, Matrículas e Financeiro.} Ele cobre o ciclo de vida
+comercial do aluno na academia: cadastrar o aluno, matriculá-lo em um plano, gerar e receber as
+mensalidades e controlar o acesso (check-in) conforme a situação do plano e dos pagamentos.
+
+\subsection{Funcionalidades}
+
+\begin{xltabular}{\textwidth}{l l Y}
+  \toprule
+  \textbf{Funcionalidade} & \textbf{Tela} & \textbf{O que faz} \\
+  \midrule
+  \endhead
+  Alunos                    & \cod{Alunos.jsx}             & Busca por nome, e-mail, CPF ou nº de matrícula; cadastro (já matriculado) e edição; mostra plano, situação, atrasos e se está na academia \\
+  Planos                    & \cod{PlanosMatriculas.jsx}   & Cadastro e edição de planos (nome, valor, duração, disponível para venda); só o administrador altera \\
+  Matrículas                & \cod{PlanosMatriculas.jsx}   & Nova matrícula para um aluno; filtro por situação; trancar, reativar, encerrar e cancelar \\
+  Financeiro                & \cod{Financeiro.jsx}         & Resumo do mês; mensalidades com filtros; receber (baixa), confirmar ou recusar pagamento informado e cancelar \\
+  Check-in da recepção      & \cod{CheckinRecepcao.jsx}    & Registra entrada e saída; valida plano ativo e mensalidades em atraso \\
+  Área do aluno             & \cod{MeusDados}, \cod{MeusPagamentos}, \cod{MeuCheckin} & O aluno edita os próprios dados, informa pagamentos e faz o próprio check-in \\
+  Rotinas automáticas       & \cod{services/rotinas.py}    & Renova matrículas e marca mensalidades atrasadas, de tempos em tempos \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Regras de negócio}
+
+\begin{itemize}
+  \item \textbf{Novo aluno já matriculado:} aluno, matrícula e \textbf{primeira cobrança} (pendente, vencendo
+        no início) são gravados na \textbf{mesma transação}; se algo falhar, nada é gravado.
+  \item \textbf{Uma matrícula ativa por aluno:} a regra vale na aplicação e é garantida por \textbf{índice
+        único no banco}, inclusive contra requisições simultâneas.
+  \item \textbf{Check-in:} só entra quem tem plano vigente. Com mensalidade em atraso, o \textbf{app do aluno
+        bloqueia} e a \textbf{recepção libera com aviso} para cobrar. Uma entrada sem saída há mais de 12\,h
+        conta como esquecida.
+  \item \textbf{Pagamentos:} formas Pix, cartão, boleto e dinheiro. O aluno \textbf{informa} o pagamento e a
+        recepção \textbf{confirma ou recusa}; a baixa não acontece duas vezes.
+  \item \textbf{Renovação automática:} a matrícula que vence é renovada com nova cobrança, exceto se estiver
+        trancada, vencida há mais de 7 dias ou com 2 mensalidades em atraso.
+  \item \textbf{Exclusão lógica:} matrículas são \textbf{canceladas} (e as mensalidades em aberto, canceladas),
+        nunca apagadas, para preservar o histórico financeiro.
+\end{itemize}
+
+\subsection{Endpoints do módulo}
+
+\begin{xltabular}{\textwidth}{l l Y l}
+  \toprule
+  \textbf{Método} & \textbf{Rota} & \textbf{Função} & \textbf{Acesso} \\
+  \midrule
+  \endhead
+  GET/POST  & \cod{/alunos}                       & Listar e cadastrar alunos (com matrícula) & equipe / recepção, admin \\
+  PUT       & \cod{/alunos/\{id\}}                & Editar aluno                              & recepção, admin \\
+  GET/POST/PUT & \cod{/planos}                    & Planos                                    & recepção, admin \\
+  GET/POST  & \cod{/matriculas}                   & Listar e criar matrículas                 & recepção, admin \\
+  PATCH     & \cod{/matriculas/\{id\}}            & Trancar, reativar, encerrar, cancelar     & recepção, admin \\
+  GET       & \cod{/pagamentos}                   & Mensalidades com filtros                  & recepção, admin \\
+  POST      & \cod{/pagamentos/\{id\}/baixa}      & Quitar mensalidade                        & recepção, admin \\
+  POST      & \cod{/pagamentos/\{id\}/recusar-informe} & Recusar pagamento informado          & recepção, admin \\
+  POST      & \cod{/pagamentos/\{id\}/cancelar}   & Cancelar mensalidade em aberto            & recepção, admin \\
+  GET/POST  & \cod{/checkins}, \cod{/checkins/hoje}, \cod{/checkins/saida} & Check-in e check-out na recepção & recepção, admin \\
+  \bottomrule
+\end{xltabular}
+
+% =============================================================
+\section{Fluxo completo de utilização}\label{sec:fluxo}
+
+Fluxo principal do módulo, do primeiro contato até o acesso à academia:
+
+\begin{enumerate}
+  \item \textbf{Login} da recepção (aba \textit{Equipe}) $\rightarrow$ abre o \textit{Dashboard}.
+  \item \textbf{Alunos} $\rightarrow$ \textit{Novo aluno}: preenche os dados e escolhe o plano. O sistema cria o
+        aluno, a matrícula e a primeira mensalidade.
+  \item \textbf{Financeiro}: a mensalidade aparece como \textit{pendente}; a recepção usa \textit{Receber},
+        escolhe a forma de pagamento e a mensalidade passa a \textit{paga}.
+  \item \textbf{Check-in}: a recepção registra a entrada do aluno; o sistema confere o plano e os atrasos.
+  \item \textbf{Planos e matrículas}: acompanha a situação da matrícula (ativa, trancada, vencida) e,
+        se preciso, tranca ou cancela.
+\end{enumerate}
+
+\evidencia{s04_alunos_lista.png}{Alunos: listagem com busca e situação de cada aluno.}{fig:alunos-lista}
+\evidencia{s04_aluno_novo.png}{Novo aluno: formulário com a escolha do plano.}{fig:aluno-novo}
+\evidencia{s04_planos.png}{Planos e matrículas: cadastro de planos e matrículas.}{fig:planos}
+\evidencia{s04_matriculas.png}{Matrículas com filtro de situação e ações (trancar, encerrar, cancelar).}{fig:matriculas}
+\evidencia{s04_financeiro.png}{Financeiro: resumo do mês e mensalidades com filtros.}{fig:financeiro}
+\evidencia{s04_financeiro_baixa.png}{Baixa de uma mensalidade escolhendo a forma de pagamento.}{fig:baixa}
+\evidencia{s04_checkin.png}{Check-in da recepção: entradas do dia e registro de entrada/saída.}{fig:checkin}
+
+% =============================================================
+\section{Persistência de dados}\label{sec:persistencia}
+
+Todos os dados do módulo ficam no \textbf{PostgreSQL do Supabase}, no schema \cod{unifit}; a aplicação não
+guarda dados em memória. Tabelas envolvidas: \cod{alunos}, \cod{planos}, \cod{matriculas},
+\cod{pagamentos} e \cod{checkins}.
+
+\subsection{Como demonstrar}
+
+\begin{enumerate}
+  \item Cadastrar um aluno pela tela \textit{Alunos} e anotar o nome e o nº de matrícula gerado.
+  \item Conferir o registro no \textit{Table Editor} do Supabase (tabelas \cod{alunos}, \cod{matriculas} e
+        \cod{pagamentos}).
+  \item \textbf{Encerrar} o backend e o frontend (\cod{Ctrl+C}) e \textbf{abri-los de novo}.
+  \item Entrar outra vez e buscar o mesmo aluno: os dados, a matrícula e a mensalidade continuam lá.
+\end{enumerate}
+
+\evidencia{s04_persistencia_antes.png}{Aluno cadastrado na aplicação (antes de reiniciar).}{fig:pers-antes}
+\evidencia{s04_persistencia_banco.png}{O mesmo aluno na tabela \cod{alunos} do Supabase.}{fig:pers-banco}
+\evidencia{s04_persistencia_depois.png}{Após encerrar e reabrir a aplicação, o aluno continua listado.}{fig:pers-depois}
+
+\subsection{Garantias de consistência}
+
+\begin{itemize}
+  \item \textbf{Transações:} cadastro de aluno + matrícula + cobrança grava tudo ou nada.
+  \item \textbf{Restrições no banco:} CPF e e-mail únicos, uma matrícula ativa por aluno (índice único),
+        chaves estrangeiras entre as tabelas.
+  \item \textbf{Fuso horário:} datas de entrada e saída em \cod{timestamptz}, exibidas em
+        \cod{America/Sao\_Paulo}.
+\end{itemize}
+
+% =============================================================
+\section{Validações implementadas}\label{sec:validacoes}
+
+As validações ocorrem em \textbf{duas camadas}: no formulário (HTML5: campos obrigatórios, tipos, limites e
+máscara de CPF) e na API (\textbf{Pydantic} e regras de negócio), de modo que dados inválidos são barrados
+mesmo que alguém chame a API diretamente.
+
+\subsection{Validações de dados}
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Campo} & \textbf{Regra} \\
+  \midrule
+  \endhead
+  Nome do aluno         & Obrigatório, 2 a 120 caracteres \\
+  E-mail                & Formato de e-mail válido, até 150 caracteres, único no sistema \\
+  CPF                   & Só dígitos, com \textbf{dígito verificador} conferido; único por aluno; máscara \cod{000.000.000-00} no formulário \\
+  Data de nascimento    & Entre 01/01/1900 e a data de hoje \\
+  Sexo                  & Somente \cod{M}, \cod{F} ou \cod{O} \\
+  Telefone              & Até 20 caracteres \\
+  Altura                & De 50 a 260\,cm \\
+  Peso                  & De 20 a 400\,kg \\
+  Senha (cadastro)      & De 8 a 72 caracteres; confirmação deve ser igual à senha \\
+  Plano                 & Nome de 2 a 80 caracteres e único; valor de 0 a 99.999; duração de 1 a 3650 dias \\
+  Forma de pagamento    & Somente Pix, cartão, boleto ou dinheiro (aluno: Pix, cartão ou boleto) \\
+  \bottomrule
+\end{xltabular}
+
+\subsection{Validações de regra de negócio}
+
+\begin{itemize}
+  \item \textbf{Só um plano ativo por aluno:} nova matrícula é recusada se já houver plano vigente.
+  \item \textbf{Plano precisa existir e estar ativo} para ser usado em matrículas e cadastros.
+  \item \textbf{Check-in:} exige plano vigente e não pode haver outra entrada aberta; saída exige entrada aberta.
+  \item \textbf{Pagamento:} não pode ser quitado duas vezes, e só mensalidades em aberto podem ser canceladas.
+  \item \textbf{Administrador} não pode rebaixar nem desativar a própria conta.
+\end{itemize}
+
+\evidencia{s04_val_cpf.png}{Validação: CPF inválido é recusado no cadastro de aluno.}{fig:val-cpf}
+\evidencia{s04_val_obrigatorio.png}{Validação: campo obrigatório não preenchido impede o envio.}{fig:val-obrig}
+\evidencia{s04_val_senha.png}{Validação: senha curta ou confirmação diferente no cadastro.}{fig:val-senha}
+\evidencia{s04_val_plano_ativo.png}{Validação de regra: segunda matrícula ativa para o mesmo aluno é recusada.}{fig:val-plano}
+
+% =============================================================
+\section{Mensagens de erro}\label{sec:erros}
+
+A API devolve o motivo em texto claro (\cod{detail}) e o frontend o exibe ao usuário, sem mostrar erros
+técnicos. A função \cod{mensagemErro()} (\cod{api.js}) traduz as mensagens dos validadores e avisa quando a
+API está fora do ar.
+
+\begin{xltabular}{\textwidth}{l l Y}
+  \toprule
+  \textbf{HTTP} & \textbf{Situação} & \textbf{Mensagem exibida} \\
+  \midrule
+  \endhead
+  --- & Formulário de cadastro (antes de enviar) & ``Digite seu nome completo.'', ``A senha precisa ter pelo menos 8 caracteres.'', ``As senhas não são iguais.'', ``Informe o CPF completo.'', ``Escolha um plano.'' \\
+  401 & Login inválido                  & ``E-mail ou senha incorretos.'' \\
+  401 & Token expirado                  & ``Sessão expirada. Entre novamente.'' \\
+  403 & Conta inativa                   & ``Sua conta está inativa ou aguardando aprovação do administrador.'' \\
+  403 & Perfil sem acesso               & ``Seu perfil não tem acesso a esta função.'' \\
+  403 & Check-in sem plano (recepção)   & ``Este aluno não tem plano ativo. Faça uma nova matrícula antes do check-in.'' \\
+  403 & Check-in sem plano (app)        & ``Sem plano ativo: renove o plano para fazer check-in.'' \\
+  403 & Mensalidade em atraso (app)     & ``Você tem mensalidade em atraso. Procure a recepção para liberar o check-in.'' \\
+  404 & Aluno / plano / pagamento       & ``Aluno não encontrado.'', ``Plano não encontrado ou inativo.'', ``Pagamento não encontrado.'' \\
+  409 & CPF repetido                    & ``Este CPF já está cadastrado para outro aluno.'' \\
+  409 & Plano repetido                  & ``Já existe um plano com este nome.'' \\
+  409 & Segunda matrícula ativa         & ``Já existe um plano ativo para este aluno.'' \\
+  409 & Check-in duplicado              & ``Já existe um check-in aberto. Faça o check-out antes.'' \\
+  409 & Saída sem entrada               & ``Não há check-in aberto.'' \\
+  409 & Baixa repetida                  & ``Este pagamento já foi quitado ou cancelado.'' \\
+  409 & Cancelar mensalidade quitada    & ``Só é possível cancelar mensalidades em aberto.'' \\
+  422 & Dados inválidos                 & Mensagem do validador (ex.: ``CPF inválido.'') ou ``Dados inválidos. Confira os campos e tente de novo.'' \\
+  429 & Muitas tentativas de login      & ``Muitas tentativas de login. Tente de novo em N minuto(s).'' \\
+  503 & API fora do ar                  & ``Erro 503: serviço indisponível no momento. Tente novamente em alguns instantes.'' \\
+  \bottomrule
+\end{xltabular}
+
+\evidencia{s04_erro_login.png}{Erro: ``E-mail ou senha incorretos.'' no login.}{fig:erro-login}
+\evidencia{s04_erro_cpf_duplicado.png}{Erro: CPF já cadastrado para outro aluno.}{fig:erro-cpf}
+\evidencia{s04_erro_checkin.png}{Erro: check-in recusado por falta de plano ativo.}{fig:erro-checkin}
+\evidencia{s04_erro_baixa.png}{Erro: tentativa de quitar uma mensalidade já paga.}{fig:erro-baixa}
+\evidencia{s04_erro_503.png}{Erro: API fora do ar, com mensagem amigável.}{fig:erro-503}
+
+% =============================================================
+\section{Navegação entre telas}\label{sec:navegacao}
+
+A navegação usa \textbf{React Router}, com um endereço por tela (por exemplo \cod{/alunos}, \cod{/planos},
+\cod{/financeiro}). O menu lateral é \textbf{filtrado pelo perfil}; quem digita o endereço de uma tela sem
+permissão é redirecionado para a primeira tela do seu menu. Sem login, qualquer endereço leva ao login e,
+depois de entrar, a pessoa volta para a tela que pediu.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    font=\small,
+    caixa/.style={draw=azul, fill=white, rounded corners=3pt, align=center,
+                  minimum width=2.6cm, minimum height=0.9cm, line width=0.6pt},
+    seta/.style={-{Stealth[length=2.5mm]}, line width=0.7pt, color=azul!80!black}
+]
+  \node[caixa] (login) {Login\\\footnotesize aba Equipe};
+  \node[caixa, right=1.0cm of login] (dash) {Dashboard};
+  \node[caixa, right=1.0cm of dash] (alu) {Alunos};
+  \node[caixa, below=1.0cm of alu] (plan) {Planos e\\matrículas};
+  \node[caixa, left=1.0cm of plan] (fin) {Financeiro};
+  \node[caixa, left=1.0cm of fin] (chk) {Check-in};
+
+  \draw[seta] (login) -- (dash);
+  \draw[seta] (dash) -- (alu);
+  \draw[seta] (alu) -- node[right, font=\footnotesize]{matricular} (plan);
+  \draw[seta] (plan) -- node[above, font=\footnotesize]{cobranças} (fin);
+  \draw[seta] (fin) -- node[above, font=\footnotesize]{liberar} (chk);
+  \draw[seta, dashed] (chk) |- ([yshift=0.9cm]dash.north) -| (dash);
+\end{tikzpicture}
+\caption{Fluxo de navegação do módulo (recepção). A seta tracejada indica o retorno ao início pelo menu.}
+\end{figure}
+
+\subsection{Telas por perfil}
+
+\begin{xltabular}{\textwidth}{X c c c c}
+  \toprule
+  \textbf{Tela} & \textbf{Aluno} & \textbf{Recepção} & \textbf{Instrutor} & \textbf{Admin} \\
+  \midrule
+  \endhead
+  Dashboard                    & \nao & \ok & \ok & \ok \\
+  Alunos                       & \nao & \ok & \ok$^{*}$ & \ok \\
+  Planos e matrículas          & \nao & \ok & \nao & \ok \\
+  Financeiro                   & \nao & \ok & \nao & \ok \\
+  Check-in (recepção)          & \nao & \ok & \nao & \ok \\
+  Meus dados / pagamentos / check-in & \ok & \nao & \nao & \nao \\
+  \bottomrule
+\end{xltabular}
+
+{\small $^{*}$ O instrutor apenas consulta a lista de alunos.}
+
+\evidencia{s04_nav_menu_recepcao.png}{Menu lateral do perfil Recepção.}{fig:nav-recepcao}
+\evidencia{s04_nav_menu_aluno.png}{Menu lateral do perfil Aluno (apenas as telas permitidas).}{fig:nav-aluno}
+
+% =============================================================
+\section{Commits e repositório}\label{sec:commits}
+
+Repositório: \url{https://github.com/Lour3nco/unifit} (branch \cod{main}). Histórico atual:
+
+\begin{center}
+\small
+\begin{tabular}{l l l l}
+  \toprule
+  \textbf{Commit} & \textbf{Data} & \textbf{Autor} & \textbf{Mensagem} \\
+  \midrule
+  \cod{5cc30cb} & 14/10/2026 & Lour3nco & Versão 1.0 \\
+  \cod{e71829d} & 15/10/2026 & Lour3nco & Atualização do repositório \\
+  \cod{47bf9af} & 20/10/2026 & Lucas Lourenço & Update README.md \\
+  \cod{f261af7} & 20/10/2026 & Lour3nco & UniFit V1.0.0 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\evidencia{github_commits.png}{Histórico de commits do repositório no GitHub.}{fig:github}
+
+\preencher{Registre aqui como a equipe passará a organizar os commits (um por funcionalidade, com mensagem
+descritiva) e a participação de cada integrante.}
+
+% =============================================================
+\section{Ajustes em relação às Sprints anteriores}
+
+Alterações na modelagem do banco feitas durante a implementação (migrações \cod{banco/00N\_*.sql}):
+
+\begin{xltabular}{\textwidth}{l Y}
+  \toprule
+  \textbf{Migração} & \textbf{Ajuste e justificativa} \\
+  \midrule
+  \endhead
+  \cod{001} & Coluna \cod{data\_saida} (check-out), perfil \cod{recepcao} no enum e número de matrícula automático (ano + sequência). Necessários para a operação da recepção. \\
+  \cod{002} & \cod{data\_saida} padronizada como \cod{timestamptz}, evitando erro de fuso horário. \\
+  \cod{003} & Registro das sessões de treino realizadas pelo aluno. \\
+  \cod{004} & Tabela de chaves de API para acesso programático. \\
+  \cod{005} & Campo de pagamento informado pelo aluno, para confirmação da recepção. \\
+  \cod{006} & Índices (inclusive o que garante uma matrícula ativa por aluno) para consistência e desempenho. \\
+  \cod{007} & Schema renomeado para \cod{unifit}. \\
+  \bottomrule
+\end{xltabular}
+
+\preencher{Registre aqui qualquer ajuste de planejamento ou arquitetura das Sprints anteriores, com a justificativa.}
+
+% =============================================================
+\section{Dificuldades encontradas e próximos passos}
+
+\subsection{Dificuldades}
+
+\begin{itemize}
+  \item \textbf{Consistência entre aluno, matrícula e cobrança:} era possível ficar com aluno sem plano ou
+        conta ``pela metade''; resolvido com transações e índice único no banco.
+  \item \textbf{Fuso horário nos check-ins:} horários errados com \cod{timestamptz}; padronizado em
+        \cod{America/Sao\_Paulo}.
+  \item \textbf{Mensalidades e renovação:} definir o que acontece com atraso, trancamento e vencimento
+        longo levou às regras de renovação automática (limite de 7 dias e de 2 atrasos).
+  \item \textbf{Mensagens de erro:} os validadores devolvem textos técnicos em inglês; foi criada a tradução
+        em \cod{mensagemErro()}.
+  \item \preencher{Acrescente aqui as dificuldades reais da equipe (organização, prazos, ferramentas).}
+\end{itemize}
+
+\subsection{Próximos passos}
+
+\begin{enumerate}
+  \item Organizar os commits por funcionalidade, com mensagens descritivas.
+  \item Treinar a IA de evasão com \textbf{dados reais} e registrar métricas de validação.
+  \item Testes de componente no frontend e integração contínua (CI).
+  \item Exportação de relatórios (PDF/CSV) e melhorias de UX no dashboard.
+\end{enumerate}
+
+\vfill
+\begin{center}\small\itshape
+ UniFit --- Sprint 04.
+\end{center}
+
+\end{document}

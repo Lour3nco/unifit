@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api, { mensagemErro } from "../api";
 import { useAuth } from "../auth.jsx";
-import { SituacaoAluno } from "../components/BuscaAluno.jsx";
-import { cpfMascara, dataHora, hojeISO, moeda, numeroOuNulo } from "../formato";
+import PageHeader from "../components/PageHeader.jsx";
+import { cpfMascara, data, dataHora, hojeISO, moeda, numeroOuNulo } from "../formato";
 
 const VAZIO = { nome: "", email: "", cpf: "", data_nascimento: "", sexo: "", telefone: "", altura_cm: "", peso_kg: "" };
 const paraForm = (a) => ({
@@ -11,13 +11,21 @@ const paraForm = (a) => ({
   sexo: (a.sexo || "").trim(), telefone: a.telefone || "", altura_cm: a.altura_cm ?? "", peso_kg: a.peso_kg ?? "",
 });
 
+const iniciais = (nome) => (nome || "?").trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+const categoria = (a) => (a.atrasados > 0 ? "pendente" : a.vigente ? "ativo" : a.matricula_status ? "pendente" : "inativo");
+const ROTULO = { ativo: "Ativo", pendente: "Pendente", inativo: "Inativo" };
+const FILTROS = [["todos", "Todos"], ["ativo", "Ativos"], ["pendente", "Pendentes"], ["inativo", "Inativos"]];
+const PAGINA = 8;
+
 export default function Alunos() {
   const { usuario } = useAuth();
   const podeEditar = ["administrador", "recepcao"].includes(usuario.perfil);
   const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState("todos");
+  const [pagina, setPagina] = useState(1);
   const [lista, setLista] = useState(null);
   const [erro, setErro] = useState("");
-  const [editando, setEditando] = useState(null); // null = fechado, "novo" ou o id do aluno
+  const [editando, setEditando] = useState(null);
 
   const carregar = (termo) =>
     api.get("/alunos", { params: { busca: termo } }).then((r) => setLista(r.data)).catch((e) => setErro(mensagemErro(e)));
@@ -27,54 +35,111 @@ export default function Alunos() {
     return () => clearTimeout(id);
   }, [busca]);
 
+  useEffect(() => { setPagina(1); }, [filtro, busca]);
+
   function salvo(aluno) {
     setLista((l) => (l.some((x) => x.id === aluno.id) ? l.map((x) => (x.id === aluno.id ? aluno : x)) : [aluno, ...l]));
     setEditando(null);
   }
 
+  const filtrada = useMemo(
+    () => (lista || []).filter((a) => filtro === "todos" || categoria(a) === filtro),
+    [lista, filtro],
+  );
+  const totalPaginas = Math.max(1, Math.ceil(filtrada.length / PAGINA));
+  const visiveis = filtrada.slice((pagina - 1) * PAGINA, pagina * PAGINA);
+  const ativos = (lista || []).filter((a) => categoria(a) === "ativo").length;
   const alunoEditado = lista?.find((a) => a.id === editando);
+
+  function exportar() {
+    const linhas = [["Matrícula", "Nome", "E-mail", "CPF", "Telefone", "Plano", "Situação", "Vencimento", "Último check-in"]];
+    filtrada.forEach((a) => linhas.push([a.numero_matricula, a.nome, a.email || "", a.cpf ? cpfMascara(a.cpf) : "",
+      a.telefone || "", a.plano || "", ROTULO[categoria(a)], a.matricula_fim ? data(a.matricula_fim) : "",
+      a.ultimo_checkin ? dataHora(a.ultimo_checkin) : ""]));
+    const csv = linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "alunos-unifit.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <>
-      <div className="toolbar">
-        <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome, e-mail, CPF ou nº de matrícula" aria-label="Buscar aluno" />
-        {podeEditar && editando === null && (
-          <button className="btn" type="button" onClick={() => setEditando("novo")}>Novo aluno</button>
-        )}
-      </div>
+      <PageHeader eyebrow={`Cadastro${lista ? ` · ${ativos} ativos` : ""}`} title="Alunos">
+        <button className="btn-sec" type="button" onClick={exportar} disabled={!lista}>Exportar</button>
+        {podeEditar && <button className="btn" type="button" onClick={() => setEditando("novo")}>+ Novo aluno</button>}
+      </PageHeader>
 
       {editando !== null && (
         <FormAluno key={editando} aluno={alunoEditado} onSalvo={salvo} onCancelar={() => setEditando(null)} />
       )}
 
+      <div className="toolbar">
+        <div className="searchbox" style={{ flex: "1 1 280px" }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+          <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome, CPF ou e-mail" aria-label="Buscar aluno" />
+        </div>
+        <div className="seg" role="tablist" aria-label="Filtrar por situação">
+          {FILTROS.map(([v, r]) => (
+            <button key={v} role="tab" aria-selected={filtro === v} onClick={() => setFiltro(v)}>{r}</button>
+          ))}
+        </div>
+      </div>
+
       <section className="card">
-        <h3>Alunos {lista && `(${lista.length}${lista.length === 200 ? "+" : ""})`}</h3>
         <div className="err" role="alert">{erro}</div>
         {!lista ? <p className="hint">Carregando...</p> : (
           <div className="tablewrap">
             <table className="t">
-              <thead><tr><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Telefone</th><th>Plano</th><th>Situação</th><th>Último check-in</th><th></th></tr></thead>
+              <thead><tr><th>Aluno</th><th>Plano</th><th>Último check-in</th><th>Vencimento</th><th>Status</th><th></th></tr></thead>
               <tbody>
-                {lista.map((a) => (
+                {visiveis.map((a) => (
                   <tr key={a.id}>
-                    <td>{a.numero_matricula}</td>
-                    <td>{a.nome}{a.na_academia && <span className="chip ativa" style={{ marginLeft: 6 }}>Na academia</span>}
-                      {!a.tem_conta && <small className="hint" style={{ display: "block" }}>sem conta no app</small>}</td>
-                    <td>{a.cpf ? cpfMascara(a.cpf) : "—"}</td>
-                    <td>{a.telefone || "—"}</td>
+                    <td>
+                      <div className="avatar-cel">
+                        <span className="avatar-ini">{iniciais(a.nome)}</span>
+                        <div>
+                          <div className="nome">{a.nome}{a.na_academia && <span className="chip ativa" style={{ marginLeft: 8 }}>Na academia</span>}</div>
+                          <div className="sub">{a.email || (a.cpf ? cpfMascara(a.cpf) : `Matrícula ${a.numero_matricula}`)}</div>
+                        </div>
+                      </div>
+                    </td>
                     <td>{a.plano || "—"}</td>
-                    <td><SituacaoAluno a={a} /></td>
-                    <td>{dataHora(a.ultimo_checkin)}</td>
-                    <td>{podeEditar && <button type="button" className="btn-sec" onClick={() => setEditando(a.id)}>Editar</button>}</td>
+                    <td>{a.ultimo_checkin ? dataHora(a.ultimo_checkin) : "—"}</td>
+                    <td>{a.matricula_fim ? data(a.matricula_fim) : "—"}</td>
+                    <td><span className={`chip ${categoria(a)}`}>{ROTULO[categoria(a)]}</span></td>
+                    <td style={{ textAlign: "right" }}>
+                      {podeEditar && <button type="button" className="rowmenu" aria-label="Editar aluno" onClick={() => setEditando(a.id)}>•••</button>}
+                    </td>
                   </tr>
                 ))}
-                {lista.length === 0 && <tr><td colSpan="8" className="vazio">Nenhum aluno encontrado.</td></tr>}
+                {filtrada.length === 0 && <tr><td colSpan="6" className="vazio">Nenhum aluno encontrado.</td></tr>}
               </tbody>
             </table>
           </div>
         )}
       </section>
+
+      {lista && filtrada.length > 0 && (
+        <div className="toolbar" style={{ justifyContent: "space-between", marginTop: 16 }}>
+          <span className="hint">
+            Mostrando {(pagina - 1) * PAGINA + 1}–{Math.min(pagina * PAGINA, filtrada.length)} de {filtrada.length} alunos
+          </span>
+          <div className="paginacao">
+            <button type="button" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1} aria-label="Anterior">‹</button>
+            {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+              .filter((n) => n === 1 || n === totalPaginas || Math.abs(n - pagina) <= 1)
+              .map((n, i, arr) => (
+                <span key={n} style={{ display: "contents" }}>
+                  {i > 0 && n - arr[i - 1] > 1 && <button type="button" disabled>…</button>}
+                  <button type="button" aria-current={n === pagina} onClick={() => setPagina(n)}>{n}</button>
+                </span>
+              ))}
+            <button type="button" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} aria-label="Próxima">›</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -100,9 +165,9 @@ function FormAluno({ aluno, onSalvo, onCancelar }) {
       sexo: f.sexo || null, telefone: f.telefone || null, altura_cm: numeroOuNulo(f.altura_cm), peso_kg: numeroOuNulo(f.peso_kg),
     };
     try {
-      const { data } = aluno ? await api.put(`/alunos/${aluno.id}`, corpo)
+      const { data: salvo } = aluno ? await api.put(`/alunos/${aluno.id}`, corpo)
         : await api.post("/alunos", { ...corpo, plano_id: Number(matricula.plano_id), data_inicio: matricula.data_inicio });
-      onSalvo(data);
+      onSalvo(salvo);
     } catch (err) {
       setErro(mensagemErro(err));
     } finally {
@@ -111,7 +176,7 @@ function FormAluno({ aluno, onSalvo, onCancelar }) {
   }
 
   return (
-    <section className="card" style={{ marginBottom: 14 }}>
+    <section className="card" style={{ marginBottom: 16 }}>
       <h3>{aluno ? `Editar ${aluno.nome} · matrícula ${aluno.numero_matricula}` : "Novo aluno"}</h3>
       <form className="form-row" onSubmit={salvar}>
         <label>Nome completo<input value={f.nome} onChange={mudar("nome")} maxLength={120} required /></label>
